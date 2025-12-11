@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import httpx
+import jsonschema
 
 from owntracks_recorder.owntracks_location import OwntracksLocationApiResponse
 
@@ -15,6 +16,11 @@ schema = httpx.get(SCHEMA_URL).json()
 class TransformerArgs(NamedTuple):
     in_dir: Path
     out_dir: Path
+
+
+class FailedToTransform(ValueError):
+    def __init__(self, value):
+        super().__init__(value)
 
 
 def parse_args() -> TransformerArgs:
@@ -38,17 +44,31 @@ def parse_args() -> TransformerArgs:
     return TransformerArgs(in_dir=parsed.in_dir, out_dir=parsed.out_dir)
 
 
-def transform():
-    args = parse_args()
-    print("Input dir:", args.in_dir)
-    print("Output dir:", args.out_dir)
-    for path in args.in_dir.iterdir():
+def getApiResponses(in_dir: Path):
+    responses: list[OwntracksLocationApiResponse] = []
+    for path in in_dir.iterdir():
         if path.is_file():
             print(f"\n--- {path.name} ---")
             with path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
-                model = OwntracksLocationApiResponse(**data)
-                print(model.count)
+                responses.append(OwntracksLocationApiResponse(**data))
+    return responses
+
+
+def transform():
+    args = parse_args()
+    print("Input dir:", args.in_dir)
+    print("Output dir:", args.out_dir)
+    for response in getApiResponses(args.in_dir):
+        for location in response.data:
+            try:
+                jsonschema.validate(
+                    instance=location .model_dump(), schema=schema)
+                print("Valid data is valid.")
+
+            except jsonschema.ValidationError as e:
+                print(f"Valid data validation error: {e.message}")
+                raise
 
 
 if __name__ == "__main__":
