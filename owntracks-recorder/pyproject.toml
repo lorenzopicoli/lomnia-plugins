@@ -19,6 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.28.1",
+    "jsonlines>=4.0.0",
     "jsonschema>=4.25.1",
     "pydantic>=2.12.5",
 ]
