@@ -24,7 +24,7 @@ class FailedToExtract(ValueError):
         super().__init__(value)
 
 
-def parse_args() -> ExtractorArgs:
+def parse_extract_args() -> ExtractorArgs:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -42,8 +42,10 @@ def parse_args() -> ExtractorArgs:
         help="Output directory path"
     )
 
-    parsed = parser.parse_args()
-    return ExtractorArgs(start_date=parsed.start_date, out_dir=parsed.out_dir)
+    args = parser.parse_args()
+    print("Start date:", args.start_date)
+    print("Output dir:", args.out_dir)
+    return ExtractorArgs(start_date=args.start_date, out_dir=args.out_dir)
 
 # Maybe one day when I support multiple users
 # def get_user_devices(client: httpx.Client):
@@ -72,6 +74,8 @@ def write_locations(client: httpx.Client, user: str, device: str, start_date: da
             "X-Limit-From": curr_date.isoformat(),
             "X-Limit-To": next_date.isoformat()
         }
+        print(
+            f"Fetching data from {headers['X-Limit-From']} to {headers['X-Limit-To']}")
         last_request_date = next_date
         file_name = os.path.join(
             out_dir, f"owntracks_{curr_date.timestamp()}_{next_date.timestamp()}.json")
@@ -88,9 +92,7 @@ def write_locations(client: httpx.Client, user: str, device: str, start_date: da
 
 
 def extract() -> datetime:
-    args = parse_args()
-    print("Start date:", args.start_date)
-    print("Output dir:", args.out_dir)
+    args = parse_extract_args()
     user = os.environ.get('OWNTRACKS_USER', None)
     device = os.environ.get('OWNTRACKS_DEVICE', None)
     if user is None:

@@ -9,13 +9,39 @@ from typing import NamedTuple
 import httpx
 import jsonlines
 import jsonschema
+from dotenv import load_dotenv
 
 from owntracks_recorder.owntracks_location import OwntracksLocation, OwntracksLocationApiResponse, TriggerType
 
-SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Location.schema.json"
-# SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/DeviceStatus.schema.json"
+load_dotenv()
 
-schema = httpx.get(SCHEMA_URL).json()
+
+def load_schema(url_env_var: str, default_url: str):
+    local_path = os.getenv(url_env_var)
+
+    if local_path:
+        file_path = Path(local_path)
+        if file_path.exists():
+            return json.loads(file_path.read_text())
+
+    return httpx.get(default_url).json()
+
+
+LOCATION_SCHEMA_URL = "https://asdaraw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Location.schema.json"
+DEVICE_STATUS_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/DeviceStatus.schema.json"
+DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Device.schema.json"
+
+location_schema = load_schema("LOCATION_SCHEMA_LOCAL", LOCATION_SCHEMA_URL)
+device_schema = load_schema("DEVICE_SCHEMA_LOCAL", DEVICE_SCHEMA_URL)
+device_status_schema = load_schema(
+    "DEVICE_STATUS_SCHEMA_LOCAL", DEVICE_STATUS_SCHEMA_URL)
+
+
+class MissingEnvVar(ValueError):
+    def __init__(self, value):
+        self.value = value
+        message = f"Missing env var: {value}"
+        super().__init__(message)
 
 
 class TransformerArgs(NamedTuple):
@@ -28,7 +54,7 @@ class FailedToTransform(ValueError):
         super().__init__(value)
 
 
-def parse_args() -> TransformerArgs:
+def parse_transform_args() -> TransformerArgs:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -60,13 +86,106 @@ def getApiResponses(in_dir: Path):
     return responses
 
 
-def transform(response: OwntracksLocation):
-    location = response
+def get_trigger(location: OwntracksLocation) -> str | None:
+    mapping = {
+        TriggerType.p: "ping",
+        TriggerType.c: "circular",
+        TriggerType.r: "report_location",
+        TriggerType.u: "manual",
+    }
+    if location.t is None:
+        return None
+    return mapping.get(location.t)
 
-    canonical = {
+
+def get_batt_status(location: OwntracksLocation) -> str | None:
+    mapping = {
+        0: "unknown",
+        1: "unplugged",
+        2: "charging",
+        3: "full",
+    }
+    if location.batt is None:
+        return None
+    return mapping.get(location.batt, None)
+
+
+def get_conn_status(location: OwntracksLocation) -> str | None:
+    mapping = {
+        "w": "wifi",
+        "o": "offline",
+        "m": "data",
+    }
+    if location.conn is None:
+        return None
+    return mapping.get(location.conn, None)
+
+
+def transform_device_status(response: OwntracksLocation):
+    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    if device is None:
+        raise MissingEnvVar("OWNTRACKS_DEVICE")
+    location = response
+    transformed_device_status = {
+        "id": location.id,
+        "entityType": "deviceStatus",
+        "source": "owntracks",
+        "version": "1",
+        "deviceId": device,
+        "battery": location.batt,
+        "timezone": location.tzname,
+        "recordedAt": datetime.fromtimestamp(location.tst, tz=timezone.utc).isoformat()
+    }
+
+    if (location.SSID is not None):
+        transformed_device_status["wifiSSID"] = location.SSID
+    if (trigger := get_trigger(location)):
+        transformed_device_status["trigger"] = trigger
+    if (batt_status := get_batt_status(location)):
+        transformed_device_status["batteryStatus"] = batt_status
+    if (conn_status := get_conn_status(location)):
+        transformed_device_status["connectionStatus"] = conn_status
+
+    try:
+        jsonschema.validate(
+            instance=transformed_device_status, schema=device_status_schema)
+    except jsonschema.ValidationError as e:
+        print(f"Valid data validation error: {e.message}")
+        raise
+    return transformed_device_status
+
+
+def transform_device():
+    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    if device is None:
+        raise MissingEnvVar("OWNTRACKS_DEVICE")
+    transformed_device = {
+        "id": device,
+        "entityType": "device",
+        "source": "owntracks",
+        "version": "1"
+    }
+    try:
+        jsonschema.validate(
+            instance=transformed_device, schema=device_schema)
+    except jsonschema.ValidationError as e:
+        print(f"Valid data validation error: {e.message}")
+        raise
+    return transformed_device
+
+
+def transform_location(response: OwntracksLocation):
+    location = response
+    # Only support single device for now
+    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    if device is None:
+        raise MissingEnvVar("OWNTRACKS_DEVICE")
+
+    transformed_loc = {
         "version": "1",
         "id": location.id,
-        # "deviceId": location.
+        "entityType": "location",
+        "deviceId": device,
         "source": "owntracks",
         "gpsSource": location.source,
         "accuracy": location.acc,
@@ -79,38 +198,36 @@ def transform(response: OwntracksLocation):
         },
         "topic": location.topic,
         "timezone": location.tzname,
-        "locationRecordedAt": datetime.fromtimestamp(location.tst, tz=timezone.utc).isoformat()
+        "recordedAt": datetime.fromtimestamp(location.tst, tz=timezone.utc).isoformat()
     }
 
-    if location.t == TriggerType.p:
-        canonical["trigger"] = "ping"
-    elif location.t == TriggerType.c:
-        canonical["trigger"] = "circular"
-    elif location.t == TriggerType.r:
-        canonical["trigger"] = "report_location"
-    elif location.t == TriggerType.u:
-        canonical["trigger"] = "manual"
-    print(canonical)
+    trigger = get_trigger(location)
+    if trigger:
+        transformed_loc["trigger"] = "ping"
+
     try:
         jsonschema.validate(
-            instance=canonical, schema=schema)
+            instance=transformed_loc, schema=location_schema)
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
-    return canonical
+    return transformed_loc
+
+
+def main():
+    args = parse_transform_args()
+    file_name = os.path.join(
+        args.out_dir, "owntracks_canonical.jsonl.gz")
+
+    with gzip.open(file_name, "wt", encoding="utf-8") as gz:
+        writer = jsonlines.Writer(gz)
+        # Currently only support one user/device
+        writer.write(transform_device())
+        for response in getApiResponses(args.in_dir):
+            for location in response.data:
+                writer.write(transform_location(location))
+                writer.write(transform_device_status(location))
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    print("Input dir:", args.in_dir)
-    print("Output dir:", args.out_dir)
-    file_name = os.path.join(
-        args.out_dir, "owntracks_canonical.jsonl.gz")
-    # with jsonlines.open(file_name, mode='w') as writer:
-    with gzip.open(file_name, "wt", encoding="utf-8") as gz:
-        writer = jsonlines.Writer(gz)
-        for response in getApiResponses(args.in_dir):
-            for location in response.data:
-                canonical = transform(location)
-                writer.write(canonical)
-                print("Valid data is valid.")
+    main()
