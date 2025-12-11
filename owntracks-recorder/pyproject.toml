@@ -24,6 +24,9 @@ dependencies = [
     "pydantic>=2.12.5",
 ]
 
+[project.scripts]
+extract = "owntracks_recorder.extract:main"
+
 [project.urls]
 Homepage = "https://lorenzopicoli.github.io/owntracks-recorder/"
 Repository = "https://github.com/lorenzopicoli/owntracks-recorder"

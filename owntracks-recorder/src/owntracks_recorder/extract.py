@@ -108,5 +108,9 @@ def extract() -> datetime:
     return last_request
 
 
+def main():
+    extract()
+
+
 if __name__ == "__main__":
-    print(extract())
+    main()
