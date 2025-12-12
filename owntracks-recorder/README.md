@@ -15,7 +15,7 @@ This plugin operates in two phases:
 ## Environment Variables
 
 The extractor requires the following environment variables.
-These are typically defined in the plugin's `env` section in your YAML configuration.
+These are typically defined in the plugin's `env` section in your YAML configuration, but you can also define it in a `.env` file.
 
 ### Required
 
