@@ -5,11 +5,14 @@ from pathlib import Path
 from typing import NamedTuple
 
 import httpx
+from dotenv import load_dotenv
 from pydantic.dataclasses import dataclass
+
+load_dotenv()
 
 
 @dataclass
-class OwnTracksSettings:
+class ExtractorEnvVars:
     user: str = os.environ["OWNTRACKS_USER"]
     device: str = os.environ["OWNTRACKS_DEVICE"]
     server_url: str = os.environ["OWNTRACKS_URL"]
@@ -101,7 +104,7 @@ def write_locations(client: httpx.Client, user: str, device: str, start_date: da
 
 def extract() -> datetime:
     args = parse_extract_args()
-    settings = OwnTracksSettings()
+    settings = ExtractorEnvVars()
 
     last_request: date | None = None
     with httpx.Client(base_url=settings.server_url, timeout=30.0) as client:

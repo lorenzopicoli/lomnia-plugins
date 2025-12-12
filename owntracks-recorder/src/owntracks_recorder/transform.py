@@ -4,37 +4,50 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 import httpx
 import jsonlines
 import jsonschema
 from dotenv import load_dotenv
+from pydantic.dataclasses import dataclass
 
 from owntracks_recorder.owntracks_location import OwntracksLocation, OwntracksLocationApiResponse, TriggerType
 
 load_dotenv()
 
 
-def load_schema(url_env_var: str, default_url: str):
-    local_path = os.getenv(url_env_var)
+@dataclass
+class TransformerEnvVars:
+    user: str = os.environ["OWNTRACKS_USER"]
+    device: str = os.environ["OWNTRACKS_DEVICE"]
+    local_loc_schema: Optional[str] = os.environ["LOCATION_SCHEMA_LOCAL"]
+    local_dev_schema: Optional[str] = os.environ["DEVICE_SCHEMA_LOCAL"]
+    local_dev_status_schema: Optional[str] = os.environ["DEVICE_STATUS_SCHEMA_LOCAL"]
 
-    if local_path:
-        file_path = Path(local_path)
+
+def load_schema(local: str | None, default_url: str):
+    if local:
+        file_path = Path(local)
         if file_path.exists():
             return json.loads(file_path.read_text())
 
     return httpx.get(default_url).json()
 
 
-LOCATION_SCHEMA_URL = "https://asdaraw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Location.schema.json"
+settings = TransformerEnvVars()
+
+
+LOCATION_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Location.schema.json"
 DEVICE_STATUS_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/DeviceStatus.schema.json"
 DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Device.schema.json"
 
-location_schema = load_schema("LOCATION_SCHEMA_LOCAL", LOCATION_SCHEMA_URL)
-device_schema = load_schema("DEVICE_SCHEMA_LOCAL", DEVICE_SCHEMA_URL)
+location_schema = load_schema(
+    local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
+device_schema = load_schema(
+    local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
 device_status_schema = load_schema(
-    "DEVICE_STATUS_SCHEMA_LOCAL", DEVICE_STATUS_SCHEMA_URL)
+    local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
 
 
 class MissingEnvVar(ValueError):
