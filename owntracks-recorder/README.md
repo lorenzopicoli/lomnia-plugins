@@ -1,28 +1,99 @@
 # owntracks-recorder
 
-[![Release](https://img.shields.io/github/v/release/lorenzopicoli/owntracks-recorder)](https://img.shields.io/github/v/release/lorenzopicoli/owntracks-recorder)
-[![Build status](https://img.shields.io/github/actions/workflow/status/lorenzopicoli/owntracks-recorder/main.yml?branch=main)](https://github.com/lorenzopicoli/owntracks-recorder/actions/workflows/main.yml?query=branch%3Amain)
-[![codecov](https://codecov.io/gh/lorenzopicoli/owntracks-recorder/branch/main/graph/badge.svg)](https://codecov.io/gh/lorenzopicoli/owntracks-recorder)
-[![Commit activity](https://img.shields.io/github/commit-activity/m/lorenzopicoli/owntracks-recorder)](https://img.shields.io/github/commit-activity/m/lorenzopicoli/owntracks-recorder)
-[![License](https://img.shields.io/github/license/lorenzopicoli/owntracks-recorder)](https://img.shields.io/github/license/lorenzopicoli/owntracks-recorder)
+A **Lomnia plugin** to extract and transform data from an [OwnTracks Recorder](https://github.com/owntracks/recorder) server instance.
 
-Lomnia plugin for importing data from a owntracks recorder instance
+## Overview
 
-- **Github repository**: <https://github.com/lorenzopicoli/owntracks-recorder/>
-- **Documentation** <https://lorenzopicoli.github.io/owntracks-recorder/>
+This plugin operates in two phases:
+
+1. **Extract** – Downloads raw JSON responses from the OwnTracks Recorder API.
+2. **Transform** – Normalizes the extracted data into a compressed JSONL file containing:
+   - `locations`
+   - `devices`
+   - `device_statuses`
+
+## Environment Variables
+
+The extractor requires the following environment variables.
+These are typically defined in the plugin's `env` section in your YAML configuration.
+
+### Required
+
+| Variable           | Description                                                                       |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `OWNTRACKS_USER`   | Username configured on the OwnTracks Recorder server.                             |
+| `OWNTRACKS_DEVICE` | Device identifier on the recorder server.                                         |
+| `OWNTRACKS_URL`    | Base URL of the OwnTracks Recorder instance (e.g. `http://192.168.100.100:8083`). |
+
+### Optional (Local Schemas)
+
+Used by the transformer to validate output.
+If not set, Lomnia defaults are used.
+
+| Variable                     | Description                             |
+| ---------------------------- | --------------------------------------- |
+| `LOCATION_SCHEMA_LOCAL`      | Path to the `Location` JSON schema.     |
+| `DEVICE_SCHEMA_LOCAL`        | Path to the `Device` JSON schema.       |
+| `DEVICE_STATUS_SCHEMA_LOCAL` | Path to the `DeviceStatus` JSON schema. |
+
+Examples:
+
+```
+OWNTRACKS_USER=owntracks
+OWNTRACKS_DEVICE=shiba
+OWNTRACKS_URL=http://192.168.40.37:8083
+
+LOCATION_SCHEMA_LOCAL=/path/to/Location.schema.json
+DEVICE_SCHEMA_LOCAL=/path/to/Device.schema.json
+DEVICE_STATUS_SCHEMA_LOCAL=/path/to/DeviceStatus.schema.json
+```
+
+## Commands
+
+### Extract
+
+Produces multiple JSON files containing raw API responses.
+
+```
+uv run extract --start_date <unix_timestamp> --out_dir <output_directory>
+```
+
+**Params:**
+
+| Parameter      | Description                                                  |
+| -------------- | ------------------------------------------------------------ |
+| `--start_date` | Unix timestamp (seconds) to start fetching location updates. |
+| `--out_dir`    | Directory where raw response files should be written.        |
+
+---
+
+### Transform
+
+Reads the raw JSON files and produces a single compressed JSONL file with normalized data.
+
+```
+uv run transform --in_dir <raw_input_directory> --out_dir <canonical_output_directory>
+```
+
+**Params:**
+
+| Parameter   | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| `--in_dir`  | Directory containing files created by the extractor. |
+| `--out_dir` | Directory where canonical output should be written.  |
+
+---
+
+If you want, I can also add a folder structure section, a quickstart section, or generate a “Plugin YAML” example that fits your ingester.
 
 ## Getting started with your project
 
-### 1. Create a New Repository
+### 1. Clone the repo
 
 First, create a repository on GitHub with the same name as this project, and then run the following commands:
 
 ```bash
-git init -b main
-git add .
-git commit -m "init commit"
-git remote add origin git@github.com:lorenzopicoli/owntracks-recorder.git
-git push -u origin main
+git clone git@github.com:lorenzopicoli/lomnia-plugins.git
 ```
 
 ### 2. Set Up Your Development Environment
@@ -52,18 +123,3 @@ git add .
 git commit -m 'Fix formatting issues'
 git push origin main
 ```
-
-You are now ready to start development on your project!
-The CI/CD pipeline will be triggered when you open a pull request, merge to main, or when you create a new release.
-
-To finalize the set-up for publishing to PyPI, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/publishing/#set-up-for-pypi).
-For activating the automatic documentation with MkDocs, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/mkdocs/#enabling-the-documentation-on-github).
-To enable the code coverage reports, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/codecov/).
-
-## Releasing a new version
-
-
-
----
-
-Repository initiated with [fpgmaas/cookiecutter-uv](https://github.com/fpgmaas/cookiecutter-uv).
