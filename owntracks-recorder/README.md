@@ -19,11 +19,11 @@ These are typically defined in the plugin's `env` section in your YAML configura
 
 ### Required
 
-| Variable           | Description                                                                       |
-| ------------------ | --------------------------------------------------------------------------------- |
-| `OWNTRACKS_USER`   | Username configured on the OwnTracks Recorder server.                             |
-| `OWNTRACKS_DEVICE` | Device identifier on the recorder server.                                         |
-| `OWNTRACKS_URL`    | Base URL of the OwnTracks Recorder instance (e.g. `http://192.168.100.100:8083`). |
+| Variable           | Description                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `OWNTRACKS_USER`   | Username configured on the OwnTracks Recorder server.                                                    |
+| `OWNTRACKS_DEVICE` | Device identifier on the recorder server.                                                                |
+| `OWNTRACKS_URL`    | (Required for extract) Base URL of the OwnTracks Recorder instance (e.g. `http://192.168.100.100:8083`). |
 
 ### Optional (Local Schemas)
 
