@@ -82,10 +82,6 @@ uv run transform --in_dir <raw_input_directory> --out_dir <canonical_output_dire
 | `--in_dir`  | Directory containing files created by the extractor. |
 | `--out_dir` | Directory where canonical output should be written.  |
 
----
-
-If you want, I can also add a folder structure section, a quickstart section, or generate a “Plugin YAML” example that fits your ingester.
-
 ## Getting started with your project
 
 ### 1. Clone the repo
