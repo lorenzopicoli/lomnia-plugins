@@ -70,7 +70,7 @@ def parse_extract_args() -> ExtractorArgs:
 #     return user_devices
 
 
-def write_locations(client: httpx.Client, user: str, device: str, start_date: datetime, out_dir: Path):
+def write_results(client: httpx.Client, user: str, device: str, start_date: datetime, out_dir: Path):
     params = {
         "user": user,
         "device": device
@@ -108,8 +108,8 @@ def extract() -> datetime:
 
     last_request: date | None = None
     with httpx.Client(base_url=settings.server_url, timeout=30.0) as client:
-        last_request = write_locations(client, user=settings.user, device=settings.device,
-                                       start_date=args.start_date, out_dir=args.out_dir)
+        last_request = write_results(client, user=settings.user, device=settings.device,
+                                     start_date=args.start_date, out_dir=args.out_dir)
 
     if last_request is None:
         raise FailedToExtract("NO_REQUEST_VALUE")
