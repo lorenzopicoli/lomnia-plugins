@@ -1,6 +1,10 @@
 import argparse
+import gzip
+import json
 import os
+import uuid
 from datetime import date, datetime, timedelta, timezone
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import NamedTuple
 
@@ -33,6 +37,54 @@ class MissingEnvVar(ValueError):
 class FailedToExtract(ValueError):
     def __init__(self, value):
         super().__init__(value)
+
+
+def get_version() -> str:
+    try:
+        return version("owntracks_recorder")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def timestamp_for_file_name(time: datetime) -> str:
+    return str(int(time.timestamp()))
+
+
+def get_short_uid() -> str:
+    return str(uuid.uuid4()).split("-")[0]
+
+
+def get_file_name(start: datetime, end: datetime) -> str:
+    service = "owntracks"
+    return f"{service}_{timestamp_for_file_name(start)}_{timestamp_for_file_name(end)}_{get_short_uid()}"
+
+
+def write_meta_file(
+    *,
+    out_dir: Path,
+    window_start: datetime,
+    window_end: datetime,
+    extractor_version: str,
+    service_version: str,
+    extract_start: datetime,
+    file_name: str
+) -> Path:
+    meta = {
+        "extraction_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "data_window_start": window_start.isoformat(),
+        "data_window_end": window_end.isoformat(),
+        "extractor_version": extractor_version,
+        "service_version": service_version,
+        "extract_start": extract_start.isoformat(),
+        "extract_end": datetime.now(timezone.utc).isoformat(),
+    }
+
+    meta_name = f"{file_name}.meta.json"
+
+    meta_path = out_dir / meta_name
+    meta_path.write_text(json.dumps(meta, indent=2))
+
+    return meta_path
 
 
 def parse_extract_args() -> ExtractorArgs:
@@ -70,33 +122,64 @@ def parse_extract_args() -> ExtractorArgs:
 #     return user_devices
 
 
-def write_results(client: httpx.Client, user: str, device: str, start_date: datetime, out_dir: Path):
+def write_results(
+    client: httpx.Client,
+    user: str,
+    device: str,
+    start_date: datetime,
+    out_dir: Path,
+) -> datetime | None:
     params = {
         "user": user,
-        "device": device
+        "device": device,
     }
+
     curr_date = start_date
-    last_request_date: date | None = None
+    extract_start = datetime.now(timezone.utc)
+    last_request_date: datetime | None = None
+
     while curr_date < datetime.now(tz=timezone.utc) - timedelta(seconds=10):
-        extra_day = curr_date + timedelta(days=1)
-        next_date = extra_day if extra_day < datetime.now(
-            tz=timezone.utc) else datetime.now(tz=timezone.utc)
+        next_date = min(
+            curr_date + timedelta(days=1),
+            datetime.now(tz=timezone.utc),
+        )
+
         headers = {
             "X-Limit-From": curr_date.isoformat(),
-            "X-Limit-To": next_date.isoformat()
+            "X-Limit-To": next_date.isoformat(),
         }
-        print(
-            f"Fetching data from {headers['X-Limit-From']} to {headers['X-Limit-To']}")
-        last_request_date = next_date
-        file_name = os.path.join(
-            out_dir, f"owntracks_{curr_date.timestamp()}_{next_date.timestamp()}.json")
-        with client.stream("GET",
-                           "/api/0/locations",
-                           params=params,
-                           headers=headers) as http_stream, open(file_name, "wb") as out:
-            for data in http_stream.iter_bytes():
-                out.write(data)
 
+        print(
+            f"Fetching data from {headers['X-Limit-From']} to {headers['X-Limit-To']}"
+        )
+
+        file_name = get_file_name(curr_date, next_date)
+        raw_file_name = f"{file_name}.json.gz"
+        raw_path = out_dir / raw_file_name
+
+        version_response = client.get("/api/0/version")
+        version = version_response.json()["version"]
+
+        with client.stream(
+            "GET",
+            "/api/0/locations",
+            params=params,
+            headers=headers,
+        ) as http_stream, gzip.open(raw_path, "wb") as out:
+            for chunk in http_stream.iter_bytes():
+                out.write(chunk)
+
+        write_meta_file(
+            out_dir=out_dir,
+            window_start=curr_date,
+            window_end=next_date,
+            extractor_version=get_version(),
+            service_version=version,
+            extract_start=extract_start,
+            file_name=file_name
+        )
+
+        last_request_date = next_date
         curr_date = next_date
 
     return last_request_date

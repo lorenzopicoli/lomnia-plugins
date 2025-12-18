@@ -2,6 +2,7 @@ import argparse
 import gzip
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple, Optional
@@ -13,6 +14,7 @@ from dotenv import load_dotenv
 from pydantic.dataclasses import dataclass
 
 from owntracks_recorder.owntracks_location import OwntracksLocation, OwntracksLocationApiResponse, TriggerType
+from owntracks_recorder.transform_run_metadata import TransformRunMetadata
 
 load_dotenv()
 
@@ -35,6 +37,8 @@ def load_schema(local: str | None, default_url: str):
     return httpx.get(default_url).json()
 
 
+run_metadata = TransformRunMetadata()
+run_metadata.start()
 settings = TransformerEnvVars()
 
 
@@ -48,6 +52,13 @@ device_schema = load_schema(
     local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
 device_status_schema = load_schema(
     local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
+
+run_metadata.set_schema(
+    entity="location", version="1")
+run_metadata.set_schema(
+    entity="device", version="1")
+run_metadata.set_schema(
+    entity="deviceStatus", version="1")
 
 
 class MissingEnvVar(ValueError):
@@ -91,10 +102,11 @@ def parse_transform_args() -> TransformerArgs:
 def getApiResponses(in_dir: Path):
     responses: list[OwntracksLocationApiResponse] = []
     for path in in_dir.iterdir():
-        if path.is_file():
+        if path.is_file() and path.suffix == ".gz":
             print(f"\n--- {path.name} ---")
-            with path.open("r", encoding="utf-8") as f:
+            with gzip.open(path, "rt", encoding="utf-8") as f:
                 data = json.load(f)
+                run_metadata.add_input(path)
                 responses.append(OwntracksLocationApiResponse(**data))
     return responses
 
@@ -139,15 +151,17 @@ def transform_device_status(response: OwntracksLocation):
     if device is None:
         raise MissingEnvVar("OWNTRACKS_DEVICE")
     location = response
+    recorded_at: datetime = datetime.fromtimestamp(
+        location.tst, tz=timezone.utc)
     transformed_device_status = {
         "id": location.id,
         "entityType": "deviceStatus",
         "source": "owntracks",
-        "version": "1",
+        "version": run_metadata.schemas["deviceStatus"],
         "deviceId": device,
         "battery": location.batt,
         "timezone": location.tzname,
-        "recordedAt": datetime.fromtimestamp(location.tst, tz=timezone.utc).isoformat()
+        "recordedAt": recorded_at.isoformat()
     }
 
     if (location.SSID is not None):
@@ -165,6 +179,7 @@ def transform_device_status(response: OwntracksLocation):
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
+    run_metadata.record_device_status(recorded_at)
     return transformed_device_status
 
 
@@ -176,7 +191,7 @@ def transform_device():
         "id": device,
         "entityType": "device",
         "source": "owntracks",
-        "version": "1"
+        "version": run_metadata.schemas["device"],
     }
     try:
         jsonschema.validate(
@@ -184,6 +199,7 @@ def transform_device():
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
+    run_metadata.record_device()
     return transformed_device
 
 
@@ -194,8 +210,10 @@ def transform_location(response: OwntracksLocation):
     if device is None:
         raise MissingEnvVar("OWNTRACKS_DEVICE")
 
+    recorded_at: datetime = datetime.fromtimestamp(
+        location.tst, tz=timezone.utc)
     transformed_loc = {
-        "version": "1",
+        "version": run_metadata.schemas["location"],
         "id": location.id,
         "entityType": "location",
         "deviceId": device,
@@ -211,7 +229,7 @@ def transform_location(response: OwntracksLocation):
         },
         "topic": location.topic,
         "timezone": location.tzname,
-        "recordedAt": datetime.fromtimestamp(location.tst, tz=timezone.utc).isoformat()
+        "recordedAt": recorded_at.isoformat()
     }
 
     trigger = get_trigger(location)
@@ -224,15 +242,31 @@ def transform_location(response: OwntracksLocation):
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
+    run_metadata.record_location(recorded_at)
     return transformed_loc
+
+
+def timestamp_for_file_name(time: datetime) -> str:
+    return str(int(time.timestamp()))
+
+
+def get_short_uid() -> str:
+    return str(uuid.uuid4()).split("-")[0]
+
+
+def get_file_name(date: datetime) -> str:
+    service = "owntracks"
+    return f"{service}_canon_{timestamp_for_file_name(date)}_{get_short_uid()}"
 
 
 def main():
     args = parse_transform_args()
     file_name = os.path.join(
-        args.out_dir, "owntracks_canonical.jsonl.gz")
+        args.out_dir, f"{get_file_name(datetime.now(timezone.utc))}")
+    canon_file = f"{file_name}.jsonl.gz"
+    metadata_file = f"{file_name}.meta.json"
 
-    with gzip.open(file_name, "wt", encoding="utf-8") as gz:
+    with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
         writer = jsonlines.Writer(gz)
         # Currently only support one user/device
         writer.write(transform_device())
@@ -240,6 +274,8 @@ def main():
             for location in response.data:
                 writer.write(transform_location(location))
                 writer.write(transform_device_status(location))
+    with Path(metadata_file).open("w", encoding="utf-8") as f:
+        json.dump(run_metadata.to_dict(), f, indent=2)
 
 
 if __name__ == "__main__":
