@@ -74,6 +74,7 @@ def write_meta_file(
         "data_window_start": window_start.isoformat(),
         "data_window_end": window_end.isoformat(),
         "extractor_version": extractor_version,
+        "extractor": "owntracks_recorder",
         "service_version": service_version,
         "extract_start": extract_start.isoformat(),
         "extract_end": datetime.now(timezone.utc).isoformat(),
