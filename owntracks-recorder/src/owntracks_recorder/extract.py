@@ -70,7 +70,6 @@ def write_meta_file(
     file_name: str
 ) -> Path:
     meta = {
-        "extraction_timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "data_window_start": window_start.isoformat(),
         "data_window_end": window_end.isoformat(),
         "extractor_version": extractor_version,
