@@ -42,9 +42,9 @@ run_metadata.start()
 settings = TransformerEnvVars()
 
 
-LOCATION_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Location.schema.json"
-DEVICE_STATUS_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/DeviceStatus.schema.json"
-DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia-ingester/refs/heads/main/src/json_schemas/v1/Device.schema.json"
+LOCATION_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/location.schema.json"
+DEVICE_STATUS_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/deviceStatus.schema.json"
+DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/device.schema.json"
 
 location_schema = load_schema(
     local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
@@ -59,6 +59,10 @@ run_metadata.set_schema(
     entity="device", version="1")
 run_metadata.set_schema(
     entity="deviceStatus", version="1")
+
+
+def iso_utc(dt):
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class MissingEnvVar(ValueError):
@@ -161,7 +165,7 @@ def transform_device_status(response: OwntracksLocation):
         "deviceId": device,
         "battery": location.batt,
         "timezone": location.tzname,
-        "recordedAt": recorded_at.isoformat()
+        "recordedAt": iso_utc(recorded_at)
     }
 
     if (location.SSID is not None):
@@ -229,7 +233,7 @@ def transform_location(response: OwntracksLocation):
         },
         "topic": location.topic,
         "timezone": location.tzname,
-        "recordedAt": recorded_at.isoformat()
+        "recordedAt": iso_utc(recorded_at)
     }
 
     trigger = get_trigger(location)
