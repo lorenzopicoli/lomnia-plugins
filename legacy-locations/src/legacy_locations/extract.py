@@ -111,7 +111,10 @@ def extract():
         if mtime <= args.start_date:
             continue
 
-        dest_name = f"{path.stem}_{get_short_uid()}{path.suffix}"
+        suffix = ''.join(path.suffixes)
+        base = path.name.removesuffix(suffix)
+
+        dest_name = f"{base}_{get_short_uid()}{suffix}"
         dest_path = args.out_dir / dest_name
 
         shutil.copy2(path, dest_path)

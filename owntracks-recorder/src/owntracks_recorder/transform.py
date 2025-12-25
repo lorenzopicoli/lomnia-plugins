@@ -103,6 +103,7 @@ def parse_transform_args() -> TransformerArgs:
     return TransformerArgs(in_dir=parsed.in_dir, out_dir=parsed.out_dir)
 
 
+# TODO: Probably want to yield each api response and not load everything in memory
 def getApiResponses(in_dir: Path):
     responses: list[OwntracksLocationApiResponse] = []
     for path in in_dir.iterdir():
