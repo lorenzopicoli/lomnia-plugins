@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 from pathlib import Path
@@ -32,3 +33,24 @@ DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs
 class TransformerArgs(NamedTuple):
     in_dir: Path
     out_dir: Path
+
+
+def parse_transform_args() -> TransformerArgs:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--out_dir",
+        required=True,
+        type=Path,
+        help="Output directory path"
+    )
+
+    parser.add_argument(
+        "--in_dir",
+        required=True,
+        type=Path,
+        help="Input directory path"
+    )
+
+    parsed = parser.parse_args()
+    return TransformerArgs(in_dir=parsed.in_dir, out_dir=parsed.out_dir)
