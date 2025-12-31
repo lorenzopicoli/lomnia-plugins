@@ -23,9 +23,10 @@ load_dotenv()
 class TransformerEnvVars:
     user: str = os.environ["OWNTRACKS_USER"]
     device: str = os.environ["OWNTRACKS_DEVICE"]
-    local_loc_schema: Optional[str] = os.environ["LOCATION_SCHEMA_LOCAL"]
-    local_dev_schema: Optional[str] = os.environ["DEVICE_SCHEMA_LOCAL"]
-    local_dev_status_schema: Optional[str] = os.environ["DEVICE_STATUS_SCHEMA_LOCAL"]
+    local_loc_schema: Optional[str] = os.getenv("LOCATION_SCHEMA_LOCAL")
+    local_dev_schema: Optional[str] = os.getenv("DEVICE_SCHEMA_LOCAL")
+    local_dev_status_schema: Optional[str] = os.getenv(
+        "DEVICE_STATUS_SCHEMA_LOCAL")
 
 
 def load_schema(local: str | None, default_url: str):
