@@ -60,11 +60,11 @@ def main():
         entity="deviceStatus", version="1")
 
     location_schema = load_schema(
-        local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
+        local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL) if not settings.skip_schema_check else None
     device_schema = load_schema(
-        local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
+        local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL) if not settings.skip_schema_check else None
     device_status_schema = load_schema(
-        local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
+        local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL) if not settings.skip_schema_check else None
 
     with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
         writer = jsonlines.Writer(gz)

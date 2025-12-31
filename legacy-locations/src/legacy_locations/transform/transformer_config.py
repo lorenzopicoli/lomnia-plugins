@@ -14,6 +14,8 @@ class TransformerEnvVars:
     local_dev_schema: Optional[str] = os.environ["DEVICE_SCHEMA_LOCAL"]
     local_dev_status_schema: Optional[str] = os.environ["DEVICE_STATUS_SCHEMA_LOCAL"]
     device: str = os.environ["DEVICE"]
+    skip_schema_check: bool = os.environ.get("SKIP_SCHEMA_CHECK", "").lower() in (
+        "1", "true", "yes", "on")
 
 
 def load_schema(local: str | None, default_url: str):

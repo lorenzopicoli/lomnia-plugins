@@ -129,9 +129,10 @@ These are typically defined in the plugin's `env` section in your YAML configura
 
 ### Required
 
-| Variable | Description                               |
-| -------- | ----------------------------------------- |
-| `DEVICE` | (Required) The device ID for all entries. |
+| Variable            | Description                                                   |
+| ------------------- | ------------------------------------------------------------- |
+| `DEVICE`            | (Required) The device ID for all entries.                     |
+| `SKIP_SCHEMA_CHECK` | (Optional) Skip checking for the schema. Improves performance |
 
 ### Optional (Local Schemas)
 

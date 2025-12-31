@@ -144,7 +144,7 @@ def get_conn_status(location: OwntracksLocation) -> str | None:
     mapping = {
         "w": "wifi",
         "o": "offline",
-        "m": "data",
+        "m": "cellular",
     }
     if location.conn is None:
         return None
