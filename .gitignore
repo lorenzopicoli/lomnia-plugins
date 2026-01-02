@@ -214,3 +214,5 @@ out-dir/
 canonical-dir/
 
 .DS_Store
+
+.env
