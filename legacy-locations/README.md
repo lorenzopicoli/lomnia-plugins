@@ -7,21 +7,23 @@ When I started developing Lomnia there were two sources of location data and the
 Export old data from the "raw" column:
 
 ```
-COPY (
-  SELECT jsonb_build_object(
-    'table', 'locations',
-    'row_id', id,
-    'import_job_id', import_job_id,
-    'recorded_at', location_fix,
-    'raw', CASE
-      WHEN jsonb_typeof(raw_data) = 'string'
-        THEN (raw_data #>> '{}')::jsonb
-      ELSE raw_data
-    END
-  )
-  FROM locations
-  ORDER BY id
-) TO '/tmp/locations_raw.jsonl';
+\COPY (
+   SELECT jsonb_build_object(
+     'table', 'locations',
+     'row_id', id,
+     'timezone', timezone,
+     'import_job_id', import_job_id,
+     'recorded_at', location_fix,
+     'raw', CASE
+       WHEN jsonb_typeof(raw_data) = 'string'
+         THEN (raw_data #>> '{}')::jsonb
+       ELSE raw_data
+     END
+   )
+   FROM locations
+   where source = 'sqlite_locations'
+   ORDER BY id
+ ) TO '/tmp/locations_raw.jsonl';
 ```
 
 ```
