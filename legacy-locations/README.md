@@ -171,6 +171,7 @@ uv run extract --start_date <unix_timestamp> --out_dir <output_directory>
 | -------------- | ------------------------------------------------------------ |
 | `--start_date` | Unix timestamp (seconds) to start fetching location updates. |
 | `--out_dir`    | Directory where raw response files should be written.        |
+| `--in_dir`     | Directory containing files to be extracted.                  |
 
 ---
 

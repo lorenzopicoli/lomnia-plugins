@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 
 
@@ -16,7 +15,7 @@ def normalize_row(row: dict) -> dict:
             "altitude": raw.get("alt"),
             "battery": raw.get("batt"),
             "batteryStatus": raw.get("bs"),
-            "trigger": raw.get('t'),
+            "trigger": raw.get("t"),
             "connectionStatus": raw.get("conn"),
             "wifiSSID": raw.get("SSID"),
             "timezone": raw.get("tzname"),
@@ -35,7 +34,7 @@ def normalize_row(row: dict) -> dict:
         "velocity": raw.get("velocity"),
         "altitude": raw.get("altitude"),
         "battery": raw.get("battery"),
-        "trigger": raw.get('triggerType'),
+        "trigger": raw.get("triggerType"),
         "batteryStatus": raw.get("batteryStatus"),
         "connectionStatus": raw.get("connectionStatus"),
         "wifiSSID": raw.get("wifiSSID"),
