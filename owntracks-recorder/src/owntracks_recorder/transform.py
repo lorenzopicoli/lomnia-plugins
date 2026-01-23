@@ -5,7 +5,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, TypeVar
 
 import httpx
 import jsonlines
@@ -16,6 +16,13 @@ from pydantic.dataclasses import dataclass
 from owntracks_recorder.owntracks_location import OwntracksLocation, OwntracksLocationApiResponse, TriggerType
 from owntracks_recorder.transform_run_metadata import TransformRunMetadata
 
+T = TypeVar("T")
+
+
+def remove_none_values(d: dict[str, T]) -> dict[str, T]:
+    return {k: v for k, v in d.items() if v is not None}
+
+
 load_dotenv()
 
 
@@ -25,8 +32,7 @@ class TransformerEnvVars:
     device: str = os.environ["OWNTRACKS_DEVICE"]
     local_loc_schema: Optional[str] = os.getenv("LOCATION_SCHEMA_LOCAL")
     local_dev_schema: Optional[str] = os.getenv("DEVICE_SCHEMA_LOCAL")
-    local_dev_status_schema: Optional[str] = os.getenv(
-        "DEVICE_STATUS_SCHEMA_LOCAL")
+    local_dev_status_schema: Optional[str] = os.getenv("DEVICE_STATUS_SCHEMA_LOCAL")
 
 
 def load_schema(local: str | None, default_url: str):
@@ -43,23 +49,23 @@ run_metadata.start()
 settings = TransformerEnvVars()
 
 
-LOCATION_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/location.schema.json"
-DEVICE_STATUS_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/deviceStatus.schema.json"
-DEVICE_SCHEMA_URL = "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/device.schema.json"
+LOCATION_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/location.schema.json"
+)
+DEVICE_STATUS_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/deviceStatus.schema.json"
+)
+DEVICE_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/device.schema.json"
+)
 
-location_schema = load_schema(
-    local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
-device_schema = load_schema(
-    local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
-device_status_schema = load_schema(
-    local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
+location_schema = load_schema(local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
+device_schema = load_schema(local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
+device_status_schema = load_schema(local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
 
-run_metadata.set_schema(
-    entity="location", version="1")
-run_metadata.set_schema(
-    entity="device", version="1")
-run_metadata.set_schema(
-    entity="deviceStatus", version="1")
+run_metadata.set_schema(entity="location", version="1")
+run_metadata.set_schema(entity="device", version="1")
+run_metadata.set_schema(entity="deviceStatus", version="1")
 
 
 def iso_utc(dt):
@@ -86,19 +92,9 @@ class FailedToTransform(ValueError):
 def parse_transform_args() -> TransformerArgs:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--out_dir",
-        required=True,
-        type=Path,
-        help="Output directory path"
-    )
+    parser.add_argument("--out_dir", required=True, type=Path, help="Output directory path")
 
-    parser.add_argument(
-        "--in_dir",
-        required=True,
-        type=Path,
-        help="Input directory path"
-    )
+    parser.add_argument("--in_dir", required=True, type=Path, help="Input directory path")
 
     parsed = parser.parse_args()
     return TransformerArgs(in_dir=parsed.in_dir, out_dir=parsed.out_dir)
@@ -153,13 +149,12 @@ def get_conn_status(location: OwntracksLocation) -> str | None:
 
 
 def transform_device_status(response: OwntracksLocation):
-    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    device = os.environ.get("OWNTRACKS_DEVICE", None)
     if device is None:
         raise MissingEnvVar("OWNTRACKS_DEVICE")
     location = response
-    recorded_at: datetime = datetime.fromtimestamp(
-        location.tst, tz=timezone.utc)
-    transformed_device_status = {
+    recorded_at: datetime = datetime.fromtimestamp(location.tst, tz=timezone.utc)
+    transformed_device_status = remove_none_values({
         "id": location.id,
         "entityType": "deviceStatus",
         "source": "owntracks",
@@ -167,21 +162,20 @@ def transform_device_status(response: OwntracksLocation):
         "deviceId": device,
         "battery": location.batt,
         "timezone": location.tzname,
-        "recordedAt": iso_utc(recorded_at)
-    }
+        "recordedAt": iso_utc(recorded_at),
+    })
 
-    if (location.SSID is not None):
+    if location.SSID is not None:
         transformed_device_status["wifiSSID"] = location.SSID
-    if (trigger := get_trigger(location)):
+    if trigger := get_trigger(location):
         transformed_device_status["trigger"] = trigger
-    if (batt_status := get_batt_status(location)):
+    if batt_status := get_batt_status(location):
         transformed_device_status["batteryStatus"] = batt_status
-    if (conn_status := get_conn_status(location)):
+    if conn_status := get_conn_status(location):
         transformed_device_status["connectionStatus"] = conn_status
 
     try:
-        jsonschema.validate(
-            instance=transformed_device_status, schema=device_status_schema)
+        jsonschema.validate(instance=transformed_device_status, schema=device_status_schema)
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
@@ -190,18 +184,17 @@ def transform_device_status(response: OwntracksLocation):
 
 
 def transform_device():
-    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    device = os.environ.get("OWNTRACKS_DEVICE", None)
     if device is None:
         raise MissingEnvVar("OWNTRACKS_DEVICE")
-    transformed_device = {
+    transformed_device = remove_none_values({
         "id": device,
         "entityType": "device",
         "source": "owntracks",
         "version": run_metadata.schemas["device"],
-    }
+    })
     try:
-        jsonschema.validate(
-            instance=transformed_device, schema=device_schema)
+        jsonschema.validate(instance=transformed_device, schema=device_schema)
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
@@ -212,13 +205,12 @@ def transform_device():
 def transform_location(response: OwntracksLocation):
     location = response
     # Only support single device for now
-    device = os.environ.get('OWNTRACKS_DEVICE', None)
+    device = os.environ.get("OWNTRACKS_DEVICE", None)
     if device is None:
         raise MissingEnvVar("OWNTRACKS_DEVICE")
 
-    recorded_at: datetime = datetime.fromtimestamp(
-        location.tst, tz=timezone.utc)
-    transformed_loc = {
+    recorded_at: datetime = datetime.fromtimestamp(location.tst, tz=timezone.utc)
+    transformed_loc = remove_none_values({
         "version": run_metadata.schemas["location"],
         "id": location.id,
         "entityType": "location",
@@ -229,22 +221,18 @@ def transform_location(response: OwntracksLocation):
         "verticalAccuracy": location.vac,
         "velocity": location.vel,
         "altitude": location.alt,
-        "location": {
-            "lat": location.lat,
-            "lng": location.lon
-        },
+        "location": {"lat": location.lat, "lng": location.lon},
         "topic": location.topic,
         "timezone": location.tzname,
-        "recordedAt": iso_utc(recorded_at)
-    }
+        "recordedAt": iso_utc(recorded_at),
+    })
 
     trigger = get_trigger(location)
     if trigger:
         transformed_loc["trigger"] = "ping"
 
     try:
-        jsonschema.validate(
-            instance=transformed_loc, schema=location_schema)
+        jsonschema.validate(instance=transformed_loc, schema=location_schema)
     except jsonschema.ValidationError as e:
         print(f"Valid data validation error: {e.message}")
         raise
@@ -267,8 +255,7 @@ def get_file_name(date: datetime) -> str:
 
 def main():
     args = parse_transform_args()
-    file_name = os.path.join(
-        args.out_dir, f"{get_file_name(datetime.now(timezone.utc))}")
+    file_name = os.path.join(args.out_dir, f"{get_file_name(datetime.now(timezone.utc))}")
     canon_file = f"{file_name}.jsonl.gz"
     metadata_file = f"{file_name}.meta.json"
 

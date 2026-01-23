@@ -132,8 +132,11 @@ def write_results(
     curr_date = start_date
     extract_start = datetime.now(timezone.utc)
     last_request_date: datetime | None = None
+    # Only do X days at a time
+    days_left = 50
 
     while curr_date < datetime.now(tz=timezone.utc) - timedelta(seconds=10):
+        days_left -= 1
         next_date = min(
             curr_date + timedelta(days=1),
             datetime.now(tz=timezone.utc),
@@ -177,6 +180,8 @@ def write_results(
 
         last_request_date = next_date
         curr_date = next_date
+        if days_left == 0:
+            break
 
     return last_request_date
 
