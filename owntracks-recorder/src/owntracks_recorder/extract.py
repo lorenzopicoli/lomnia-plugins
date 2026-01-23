@@ -28,14 +28,14 @@ class ExtractorArgs(NamedTuple):
 
 
 class MissingEnvVar(ValueError):
-    def __init__(self, value):
+    def __init__(self, value: str):
         self.value = value
         message = f"Missing env var: {value}"
         super().__init__(message)
 
 
 class FailedToExtract(ValueError):
-    def __init__(self, value):
+    def __init__(self, value: str):
         super().__init__(value)
 
 
@@ -67,7 +67,7 @@ def write_meta_file(
     extractor_version: str,
     service_version: str,
     extract_start: datetime,
-    file_name: str
+    file_name: str,
 ) -> Path:
     meta = {
         "data_window_start": window_start.isoformat(),
@@ -93,22 +93,17 @@ def parse_extract_args() -> ExtractorArgs:
     parser.add_argument(
         "--start_date",
         required=True,
-        type=lambda value: datetime.fromtimestamp(
-            float(value), tz=timezone.utc),
-        help="Start date in YYYY-MM-DD format"
+        type=lambda value: datetime.fromtimestamp(float(value), tz=timezone.utc),
+        help="Start date in YYYY-MM-DD format",
     )
 
-    parser.add_argument(
-        "--out_dir",
-        required=True,
-        type=Path,
-        help="Output directory path"
-    )
+    parser.add_argument("--out_dir", required=True, type=Path, help="Output directory path")
 
     args = parser.parse_args()
     print("Start date:", args.start_date)
     print("Output dir:", args.out_dir)
     return ExtractorArgs(start_date=args.start_date, out_dir=args.out_dir)
+
 
 # Maybe one day when I support multiple users
 # def get_user_devices(client: httpx.Client):
@@ -149,9 +144,7 @@ def write_results(
             "X-Limit-To": next_date.isoformat(),
         }
 
-        print(
-            f"Fetching data from {headers['X-Limit-From']} to {headers['X-Limit-To']}"
-        )
+        print(f"Fetching data from {headers['X-Limit-From']} to {headers['X-Limit-To']}")
 
         file_name = get_file_name(curr_date, next_date)
         raw_file_name = f"{file_name}.json.gz"
@@ -160,12 +153,15 @@ def write_results(
         version_response = client.get("/api/0/version")
         version = version_response.json()["version"]
 
-        with client.stream(
-            "GET",
-            "/api/0/locations",
-            params=params,
-            headers=headers,
-        ) as http_stream, gzip.open(raw_path, "wb") as out:
+        with (
+            client.stream(
+                "GET",
+                "/api/0/locations",
+                params=params,
+                headers=headers,
+            ) as http_stream,
+            gzip.open(raw_path, "wb") as out,
+        ):
             for chunk in http_stream.iter_bytes():
                 out.write(chunk)
 
@@ -176,7 +172,7 @@ def write_results(
             extractor_version=get_version(),
             service_version=version,
             extract_start=extract_start,
-            file_name=file_name
+            file_name=file_name,
         )
 
         last_request_date = next_date
@@ -191,8 +187,9 @@ def extract() -> datetime:
 
     last_request: date | None = None
     with httpx.Client(base_url=settings.server_url, timeout=30.0) as client:
-        last_request = write_results(client, user=settings.user, device=settings.device,
-                                     start_date=args.start_date, out_dir=args.out_dir)
+        last_request = write_results(
+            client, user=settings.user, device=settings.device, start_date=args.start_date, out_dir=args.out_dir
+        )
 
     if last_request is None:
         raise FailedToExtract("NO_REQUEST_VALUE")
