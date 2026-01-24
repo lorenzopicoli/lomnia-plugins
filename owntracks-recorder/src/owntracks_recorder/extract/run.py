@@ -57,7 +57,7 @@ def write_results(client: httpx.Client, params: ExtractionParams) -> datetime | 
         "device": params.device,
     }
 
-    curr_date = start_date
+    curr_date = params.start_date
     extract_start = datetime.now(timezone.utc)
     last_request_date: datetime | None = None
     # Only do X days at a time

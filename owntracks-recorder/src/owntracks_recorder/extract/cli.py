@@ -40,6 +40,7 @@ def extract():
     args = parser.parse_args()
     print("Start date:", args.start_date)
     print("Output dir:", args.out_dir)
+    print(f"Env vars: {env}")
     params = ExtractionParams(
         user=env.user, device=env.device, server_url=env.server_url, start_date=args.start_date, out_dir=args.out_dir
     )

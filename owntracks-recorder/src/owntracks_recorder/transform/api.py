@@ -1,15 +1,41 @@
+import gzip
+import json
+from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from owntracks_recorder.transform.meta import TransformRunMetadata
 
-class OwntracksLocationApiResponse(BaseModel):
-    count: Optional[int] = Field(None, description="")
-    data: list[OwntracksLocation]
-    status: int
-    version: str
 
-    model_config = {"extra": "forbid"}
+class TriggerType(str, Enum):
+    """
+    Trigger type
+    - p ping issued randomly by background task (iOS,Android)
+    - c circular region enter/leave event (iOS,Android)
+    - C circular region enter/leave event for +follow regions (iOS)
+    - b beacon region enter/leave event (iOS)
+    - r response to a reportLocation cmd message (iOS,Android)
+    - u manual publish requested by the user (iOS,Android)
+    - t timer based publish in move move (iOS)
+    - v updated by Settings/Privacy/Locations Services/System Services/Frequent Locations monitoring (iOS)
+    """
+
+    p = "p"
+    c = "c"
+    C = "C"
+    b = "b"
+    r = "r"
+    u = "u"
+    t = "t"
+    v = "v"
+
+
+class ConnectivityStatus(str, Enum):
+    w = "w"
+    o = "o"
+    m = "m"
 
 
 class OwntracksLocation(BaseModel):
@@ -73,14 +99,23 @@ class OwntracksLocation(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class OwntracksLocationApiResponse(BaseModel):
+    count: Optional[int] = Field(None, description="")
+    data: list[OwntracksLocation]
+    status: int
+    version: str
+
+    model_config = {"extra": "forbid"}
+
+
 # TODO: Probably want to yield each api response and not load everything in memory
-def getApiResponses(in_dir: Path):
+def getApiResponses(in_dir: Path, metadata: TransformRunMetadata):
     responses: list[OwntracksLocationApiResponse] = []
     for path in in_dir.iterdir():
         if path.is_file() and path.suffix == ".gz":
-            print(f"\n--- {path.name} ---")
+            print(f"Loading file: {path.name}")
+            metadata.add_file_processed(path)
             with gzip.open(path, "rt", encoding="utf-8") as f:
                 data = json.load(f)
-                run_metadata.add_input(path)
                 responses.append(OwntracksLocationApiResponse(**data))
     return responses
