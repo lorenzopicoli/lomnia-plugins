@@ -29,9 +29,10 @@ def transform():
     print(f"In Dir: {args.in_dir}")
     print(f"Out Dir: {args.out_dir}")
     print(f"Env vars: {env}")
-    print(f"Schemas: {schemas}")
 
     run_transform(device=env.device, out_dir=args.out_dir, in_dir=args.in_dir, schemas=schemas)
+
+    print("Done transforming!")
 
 
 def main():

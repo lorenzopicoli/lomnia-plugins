@@ -4,10 +4,10 @@ import jsonschema
 
 from owntracks_recorder.transform.mappers.battery_status import get_batt_status
 from owntracks_recorder.transform.mappers.connection_status import get_conn_status
+from owntracks_recorder.transform.mappers.transformer_params import TransformerParams
 from owntracks_recorder.transform.mappers.trigger import get_trigger
 from owntracks_recorder.transform.mappers.utils.iso_utc import iso_utc
 from owntracks_recorder.transform.mappers.utils.remove_none_values import remove_none_values
-from owntracks_recorder.transform.run import TransformerParams
 
 
 def transform_device_status(params: TransformerParams):
@@ -17,7 +17,7 @@ def transform_device_status(params: TransformerParams):
         "id": location.id,
         "entityType": "deviceStatus",
         "source": "owntracks",
-        "version": params.metadata.schemas["deviceStatus"],
+        "version": "1",
         "deviceId": params.device,
         "battery": location.batt,
         "timezone": location.tzname,

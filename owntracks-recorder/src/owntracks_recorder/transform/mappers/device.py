@@ -1,7 +1,7 @@
 import jsonschema
 
+from owntracks_recorder.transform.mappers.transformer_params import TransformerParams
 from owntracks_recorder.transform.mappers.utils.remove_none_values import remove_none_values
-from owntracks_recorder.transform.run import TransformerParams
 
 
 def transform_device(params: TransformerParams):

@@ -2,27 +2,19 @@ import gzip
 import json
 import os
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from jsonlines import jsonlines
 
 from owntracks_recorder.config import PLUGIN_NAME
-from owntracks_recorder.transform.api import OwntracksLocation, getApiResponses
+from owntracks_recorder.transform.api import getApiResponses
 from owntracks_recorder.transform.mappers.device import transform_device
 from owntracks_recorder.transform.mappers.device_status import transform_device_status
 from owntracks_recorder.transform.mappers.location import transform_location
+from owntracks_recorder.transform.mappers.transformer_params import TransformerParams
 from owntracks_recorder.transform.meta import TransformRunMetadata
 from owntracks_recorder.transform.schemas import Schemas
-
-
-@dataclass
-class TransformerParams:
-    device: str
-    schemas: Schemas
-    metadata: TransformRunMetadata
-    data: OwntracksLocation
 
 
 def timestamp(time: datetime) -> str:

@@ -26,8 +26,8 @@ dependencies = [
 ]
 
 [project.scripts]
-extract = "owntracks_recorder.extract:main"
-transform = "owntracks_recorder.transform:main"
+extract = "owntracks_recorder.extract.cli:main"
+transform = "owntracks_recorder.transform.cli:main"
 
 [project.urls]
 Homepage = "https://lorenzopicoli.github.io/owntracks-recorder/"
@@ -39,11 +39,11 @@ dev = [
     "pytest>=9.0.2",
     "pre-commit>=4.5.0",
     "tox-uv>=1.29.0",
-    
+
     "ty>=0.0.1a32",
-    
+
     "ruff>=0.14.8",
-    
+
 ]
 
 [build-system]
@@ -110,5 +110,3 @@ ignore = [
 
 [tool.ruff.format]
 preview = true
-
-
