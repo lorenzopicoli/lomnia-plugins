@@ -2,13 +2,15 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from owntracks_recorder.config import PACKAGE_NAME
+from owntracks_recorder.version import get_version
+
 
 def write_meta_file(
     *,
     out_dir: Path,
     window_start: datetime,
     window_end: datetime,
-    extractor_version: str,
     service_version: str,
     extract_start: datetime,
     file_name: str,
@@ -16,8 +18,8 @@ def write_meta_file(
     meta = {
         "data_window_start": window_start.isoformat(),
         "data_window_end": window_end.isoformat(),
-        "extractor_version": extractor_version,
-        "extractor": "owntracks_recorder",
+        "extractor_version": get_version(),
+        "extractor": PACKAGE_NAME,
         "service_version": service_version,
         "extract_start": extract_start.isoformat(),
         "extract_end": datetime.now(timezone.utc).isoformat(),

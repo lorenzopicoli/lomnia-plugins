@@ -8,7 +8,6 @@ import httpx
 
 from owntracks_recorder.config import PLUGIN_NAME
 from owntracks_recorder.extract.meta import write_meta_file
-from owntracks_recorder.version import get_version
 
 
 class FailedToExtract(ValueError):
@@ -100,7 +99,6 @@ def write_results(client: httpx.Client, params: ExtractionParams) -> datetime | 
             out_dir=params.out_dir,
             window_start=curr_date,
             window_end=next_date,
-            extractor_version=get_version(),
             service_version=version,
             extract_start=extract_start,
             file_name=file_name,
