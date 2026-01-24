@@ -5,13 +5,11 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NamedTuple, Optional, TypeVar
+from typing import TypeVar
 
-import httpx
 import jsonlines
 import jsonschema
 from dotenv import load_dotenv
-from pydantic.dataclasses import dataclass
 
 from owntracks_recorder.owntracks_location import OwntracksLocation, OwntracksLocationApiResponse, TriggerType
 from owntracks_recorder.transform_run_metadata import TransformRunMetadata
@@ -26,42 +24,9 @@ def remove_none_values(d: dict[str, T]) -> dict[str, T]:
 load_dotenv()
 
 
-@dataclass
-class TransformerEnvVars:
-    user: str = os.environ["OWNTRACKS_USER"]
-    device: str = os.environ["OWNTRACKS_DEVICE"]
-    local_loc_schema: Optional[str] = os.getenv("LOCATION_SCHEMA_LOCAL")
-    local_dev_schema: Optional[str] = os.getenv("DEVICE_SCHEMA_LOCAL")
-    local_dev_status_schema: Optional[str] = os.getenv("DEVICE_STATUS_SCHEMA_LOCAL")
-
-
-def load_schema(local: str | None, default_url: str):
-    if local:
-        file_path = Path(local)
-        if file_path.exists():
-            return json.loads(file_path.read_text())
-
-    return httpx.get(default_url).json()
-
-
 run_metadata = TransformRunMetadata()
 run_metadata.start()
-settings = TransformerEnvVars()
 
-
-LOCATION_SCHEMA_URL = (
-    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/location.schema.json"
-)
-DEVICE_STATUS_SCHEMA_URL = (
-    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/deviceStatus.schema.json"
-)
-DEVICE_SCHEMA_URL = (
-    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/device.schema.json"
-)
-
-location_schema = load_schema(local=settings.local_loc_schema, default_url=LOCATION_SCHEMA_URL)
-device_schema = load_schema(local=settings.local_dev_schema, default_url=DEVICE_SCHEMA_URL)
-device_status_schema = load_schema(local=settings.local_dev_status_schema, default_url=DEVICE_STATUS_SCHEMA_URL)
 
 run_metadata.set_schema(entity="location", version="1")
 run_metadata.set_schema(entity="device", version="1")
@@ -70,18 +35,6 @@ run_metadata.set_schema(entity="deviceStatus", version="1")
 
 def iso_utc(dt):
     return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-class MissingEnvVar(ValueError):
-    def __init__(self, value):
-        self.value = value
-        message = f"Missing env var: {value}"
-        super().__init__(message)
-
-
-class TransformerArgs(NamedTuple):
-    in_dir: Path
-    out_dir: Path
 
 
 class FailedToTransform(ValueError):
@@ -259,12 +212,16 @@ def main():
     canon_file = f"{file_name}.jsonl.gz"
     metadata_file = f"{file_name}.meta.json"
 
+    is_device_saved = False
+
     with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
         writer = jsonlines.Writer(gz)
-        # Currently only support one user/device
-        writer.write(transform_device())
         for response in getApiResponses(args.in_dir):
             for location in response.data:
+                if not is_device_saved:
+                    # Currently only support one user/device
+                    writer.write(transform_device())
+
                 writer.write(transform_location(location))
                 writer.write(transform_device_status(location))
     with Path(metadata_file).open("w", encoding="utf-8") as f:
