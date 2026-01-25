@@ -34,6 +34,8 @@ def run_transform(
     metadata_file = f"{file_path}.meta.json"
 
     is_device_saved = False
+    log_every = 10000
+    row_count = 0
 
     metadata = TransformRunMetadata()
 
@@ -41,6 +43,7 @@ def run_transform(
         writer = jsonlines.Writer(gz)
         for response in getApiResponses(in_dir, metadata):
             for location in response.data:
+                row_count += 1
                 params = TransformerParams(device=device, schemas=schemas, metadata=metadata, data=location)
                 if not is_device_saved:
                     # Currently only support one user/device
@@ -49,5 +52,10 @@ def run_transform(
 
                 writer.write(transform_location(params))
                 writer.write(transform_device_status(params))
+
+                if row_count % log_every == 0:
+                    print(
+                        f"Processed {row_count} rows (locations={metadata.counts.get('location')}, device_status={metadata.counts.get('device_status')})"
+                    )
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
