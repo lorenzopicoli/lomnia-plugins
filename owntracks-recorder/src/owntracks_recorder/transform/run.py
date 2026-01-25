@@ -45,6 +45,7 @@ def run_transform(
                 if not is_device_saved:
                     # Currently only support one user/device
                     writer.write(transform_device(params))
+                    is_device_saved = True
 
                 writer.write(transform_location(params))
                 writer.write(transform_device_status(params))

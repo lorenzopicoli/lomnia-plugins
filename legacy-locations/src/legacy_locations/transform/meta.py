@@ -3,15 +3,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from legacy_locations.extract import get_version
+from legacy_locations.config import PACKAGE_NAME
+from legacy_locations.version import get_version
 
 
 @dataclass
 class TransformRunMetadata:
-    transformer: str = "legacy_locations"
+    transformer: str = PACKAGE_NAME
     transformer_version: str = get_version()
 
-    inputs: list[str] = field(default_factory=list)
+    files_processed: list[str] = field(default_factory=list)
 
     min_date: Optional[datetime] = None
     max_date: Optional[datetime] = None
@@ -26,10 +27,8 @@ class TransformRunMetadata:
         }
     )
 
-    schemas: dict[str, str] = field(default_factory=dict)
-
-    def add_input(self, path: Path) -> None:
-        self.inputs.append(path.name)
+    def add_files_processed(self, path: Path) -> None:
+        self.files_processed.append(path.name)
 
     def start(self) -> None:
         self.start_date = datetime.now(timezone.utc)
@@ -44,9 +43,6 @@ class TransformRunMetadata:
     def record_device_status(self, recorded_at: datetime) -> None:
         self._inc("device_status")
         self._update_time_bounds(recorded_at)
-
-    def set_schema(self, entity: str, version: str) -> None:
-        self.schemas[entity] = version
 
     def _inc(self, key: str) -> None:
         self.counts[key] += 1
@@ -63,15 +59,8 @@ class TransformRunMetadata:
             "transformer_version": self.transformer_version,
             "transform_start": self.start_date.isoformat() if self.start_date else None,
             "transform_end": datetime.now(timezone.utc).isoformat(),
-            "inputs": self.inputs,
-            "window_start": (
-                self.min_date.isoformat()
-                if self.min_date else None
-            ),
-            "window_end": (
-                self.max_date.isoformat()
-                if self.max_date else None
-            ),
+            "inputs": self.files_processed,
+            "window_start": (self.min_date.isoformat() if self.min_date else None),
+            "window_end": (self.max_date.isoformat() if self.max_date else None),
             "counts": self.counts,
-            "schemas": self.schemas,
         }

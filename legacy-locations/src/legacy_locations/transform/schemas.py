@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
 import httpx
-from dotenv.main import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -32,6 +32,7 @@ class Schemas(NamedTuple):
     location: Any
     device: Any
     device_status: Any
+    skip_schema_check: bool
 
 
 def load_schema(local: str | None, default_url: str):
@@ -57,4 +58,4 @@ def get_schemas():
         else None
     )
 
-    return Schemas(location_schema, device_schema, device_status_schema)
+    return Schemas(location_schema, device_schema, device_status_schema, env.skip_schema_check)

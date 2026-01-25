@@ -27,8 +27,6 @@ class TransformRunMetadata:
         }
     )
 
-    schemas: dict[str, str] = field(default_factory=dict)
-
     def add_file_processed(self, path: Path) -> None:
         self.files_processed.append(path.name)
 
@@ -45,9 +43,6 @@ class TransformRunMetadata:
     def record_device_status(self, recorded_at: datetime) -> None:
         self._inc("device_status")
         self._update_time_bounds(recorded_at)
-
-    def set_schema(self, entity: str, version: str) -> None:
-        self.schemas[entity] = version
 
     def _inc(self, key: str) -> None:
         self.counts[key] += 1
@@ -68,5 +63,4 @@ class TransformRunMetadata:
             "window_start": (self.min_date.isoformat() if self.min_date else None),
             "window_end": (self.max_date.isoformat() if self.max_date else None),
             "counts": self.counts,
-            "schemas": self.schemas,
         }

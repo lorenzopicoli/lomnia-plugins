@@ -35,11 +35,11 @@ dev = [
     "pytest>=9.0.2",
     "pre-commit>=4.5.0",
     "tox-uv>=1.29.0",
-    
+
     "ty>=0.0.1a32",
-    
+
     "ruff>=0.14.8",
-    
+
 ]
 
 [build-system]
@@ -62,8 +62,8 @@ line-length = 120
 fix = true
 
 [project.scripts]
-extract = "legacy_locations.extract:main"
-transform = "legacy_locations.transform_cli:main"
+extract = "legacy_locations.extract.cli:main"
+transform = "legacy_locations.transform.cli:main"
 
 [tool.ruff.lint]
 select = [
@@ -110,5 +110,3 @@ ignore = [
 
 [tool.ruff.format]
 preview = true
-
-
