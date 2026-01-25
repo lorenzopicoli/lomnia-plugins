@@ -1,8 +1,6 @@
 # Legacy Locations
 
-A **Lomnia plugin** to extract and transform data from an old instance of Lomnia.
-
-When I started developing Lomnia there were two sources of location data and they weren't properly backed up or imported
+A **Lomnia plugin** to extract and transform data from https://github.com/lorenzopicoli/location-tracker
 
 Export old data from the "raw" column:
 
@@ -34,7 +32,7 @@ Export old data from the "raw" column:
 gzip locations_raw.jsonl
 ```
 
-The jsonlines will have more than one type of record. The initial one from my own server:
+The jsonlines will look like this
 
 ```
 {
@@ -72,57 +70,6 @@ The jsonlines will have more than one type of record. The initial one from my ow
   "import_job_id": 657
 }
 ```
-
-And another one from when I transitioned to owntracks recorder:
-
-```
-{
-  "raw": {
-    "m": 2,
-    "bs": 1,
-    "_id": "2ef93a57",
-    "acc": 12,
-    "alt": 26,
-    "cog": 0,
-    "lat": 45,
-    "lon": -73,
-    "tid": "ba",
-    "tst": 1757979198,
-    "vac": 0,
-    "vel": 0,
-    "SSID": "Anya - Secure",
-    "batt": 32,
-    "conn": "w",
-    "BSSID": "06:ec:da:ae:0c:de",
-    "_http": true,
-    "_type": "location",
-    "ghash": "f25ehek",
-    "topic": "owntracks/user/shiba",
-    "isorcv": "2025-09-15T23:33:18Z",
-    "isotst": "2025-09-15T23:33:18Z",
-    "source": "fused",
-    "tzname": "America/Toronto",
-    "disptst": "2025-09-15 23:33:18",
-    "isolocal": "2025-09-15T19:33:18-0400",
-    "created_at": 1757979198
-  },
-  "table": "locations",
-  "row_id": 11896408,
-  "timezone": "Europe/Paris",
-  "recorded_at": "2025-09-15T23:33:18+00:00",
-  "import_job_id": 2853
-}
-```
-
-## Overview
-
-This plugin operates in two phases:
-
-1. **Extract** – Downloads raw JSON responses from the OwnTracks Recorder API.
-2. **Transform** – Normalizes the extracted data into a compressed JSONL file containing:
-   - `locations`
-   - `devices`
-   - `device_statuses`
 
 ## Environment Variables
 
