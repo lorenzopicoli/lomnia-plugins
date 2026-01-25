@@ -38,6 +38,7 @@ def run_transform(
     row_count = 0
 
     metadata = TransformRunMetadata()
+    metadata.start()
 
     with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
         writer = jsonlines.Writer(gz)
