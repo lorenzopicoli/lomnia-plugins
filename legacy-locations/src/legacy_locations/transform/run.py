@@ -27,6 +27,7 @@ def run_transform(device: str, out_dir: str, in_dir: str, schemas: Schemas):
     metadata_file = f"{file_path}.meta.json"
 
     metadata = TransformRunMetadata()
+    metadata.start()
     is_device_saved = False
     log_every = 10000
     row_count = 0
