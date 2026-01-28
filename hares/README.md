@@ -20,23 +20,15 @@ If not set, Lomnia defaults are used.
 
 | Variable                     | Description                             |
 | ---------------------------- | --------------------------------------- |
-| `LOCATION_SCHEMA_LOCAL`      | Path to the `Location` JSON schema.     |
-| `DEVICE_SCHEMA_LOCAL`        | Path to the `Device` JSON schema.       |
-| `DEVICE_STATUS_SCHEMA_LOCAL` | Path to the `DeviceStatus` JSON schema. |
+| `HABIT_SCHEMA_LOCAL`      | Path to the `Location` JSON schema.     |
 
-Examples:
-
-```
-LOCATION_SCHEMA_LOCAL=/path/to/Location.schema.json
-DEVICE_SCHEMA_LOCAL=/path/to/Device.schema.json
-DEVICE_STATUS_SCHEMA_LOCAL=/path/to/DeviceStatus.schema.json
-```
+``
 
 ## Commands
 
 ### Extract
 
-Produces multiple JSON files containing raw API responses.
+Produces a gzip file for the latest sqlite in the in-dir
 
 ```
 uv run extract --start_date <unix_timestamp> --out_dir <output_directory>
@@ -54,7 +46,7 @@ uv run extract --start_date <unix_timestamp> --out_dir <output_directory>
 
 ### Transform
 
-Reads the raw JSON files and produces a single compressed JSONL file with normalized data.
+Reads the SQLite databases and produces a single compressed JSONL file with normalized data.
 
 ```
 uv run transform --in_dir <raw_input_directory> --out_dir <canonical_output_directory>
