@@ -1,0 +1,48 @@
+import gzip
+import json
+import os
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+import jsonlines
+from dotenv import load_dotenv
+
+from firefox.config import PLUGIN_NAME
+from firefox.transform.meta import TransformRunMetadata
+from firefox.transform.schemas import Schemas
+
+load_dotenv()
+
+
+def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
+    file_name = f"{PLUGIN_NAME}_canon_{timestamp(datetime.now(timezone.utc))}_{str(uuid.uuid4()).split('-')[0]}"
+    file_path = os.path.join(out_dir, file_name)
+    canon_file = f"{file_path}.jsonl.gz"
+    metadata_file = f"{file_path}.meta.json"
+
+    metadata = TransformRunMetadata()
+    log_every = 10000
+    row_count = 0
+
+    with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
+        writer = jsonlines.Writer(gz)
+
+        # Example bellow of iterating over a file and writting results and logging progress
+        # for row in get_rows(Path(in_dir), metadata):
+        #     row_count += 1
+        #     params = TransformerParams(device=device, schemas=schemas, metadata=metadata, data=row)
+        #
+        #     writer.write(transform_location(params))
+        #     writer.write(transform_device_status(params))
+        #     if row_count % log_every == 0:
+        #       print(
+        #          f"Processed {row_count} rows (locations={metadata.counts.get('location')}, device_status={metadata.counts.get('device_status')})"
+        #       )
+
+    with Path(metadata_file).open("w", encoding="utf-8") as f:
+        json.dump(metadata.to_dict(), f, indent=2)
+
+
+def timestamp(time: datetime) -> str:
+    return str(int(time.timestamp()))
