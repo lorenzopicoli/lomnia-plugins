@@ -5,6 +5,7 @@ from firefox.transform.mappers.transformer_params import WebsiteVisitTransformer
 from firefox.transform.mappers.utils.iso_utc import iso_utc
 from firefox.transform.mappers.utils.microseconds_to_datetime import microseconds_to_datetime
 from firefox.transform.mappers.utils.remove_none_values import remove_none_values
+from firefox.transform.mappers.visit_type import transform_visit_type
 from firefox.transform.mappers.website import get_website_id
 
 
@@ -22,10 +23,12 @@ def transform_website_visit(params: WebsiteVisitTransformerParams):
         "version": "1",
         "websiteId": get_website_id(data.place_guid),
         "fromVisitId": get_visit_id(data.place_guid, data.visit_date),
-        # "type": ,
         "fileDownloaded": data.downloaded_file,
         "recordedAt": iso_utc(visit_date),
     })
+
+    if data.visit_type is not None:
+        transformed["type"] = transform_visit_type(data.visit_type)
 
     if params.schemas.website is not None:
         try:
