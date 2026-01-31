@@ -12,7 +12,7 @@ import jsonlines
 from dotenv import load_dotenv
 
 from firefox.config import PLUGIN_NAME
-from firefox.transform.mappers.transformer_params import WebsiteTransformerParams
+from firefox.transform.mappers.transformer_params import WebsiteTransformerParams, WebsiteVisitTransformerParams
 from firefox.transform.mappers.visit import transform_website_visit
 from firefox.transform.mappers.website import transform_website
 from firefox.transform.meta import TransformRunMetadata
@@ -55,19 +55,19 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                     if row_count % log_every == 0:
                         print(
                             f"Processed {row_count} rows "
-                            f"(location={metadata.counts.get('website')}, "
-                            f"device_status={metadata.counts.get('website_visit')})"
+                            f"(website={metadata.counts.get('website')}, "
+                            f"website_visits={metadata.counts.get('website_visit')})"
                         )
                 for row in fetch_website_visits(db_path):
                     row_count += 1
-                    params = WebsiteTransformerParams(schemas=schemas, metadata=metadata, place=row)
+                    params = WebsiteVisitTransformerParams(schemas=schemas, metadata=metadata, place=row)
                     writer.write(transform_website_visit(params))
 
                     if row_count % log_every == 0:
                         print(
                             f"Processed {row_count} rows "
-                            f"(location={metadata.counts.get('website')}, "
-                            f"device_status={metadata.counts.get('website_visit')})"
+                            f"(website={metadata.counts.get('website')}, "
+                            f"website_visits={metadata.counts.get('website_visit')})"
                         )
 
     with Path(metadata_file).open("w", encoding="utf-8") as f:
@@ -86,19 +86,7 @@ def fetch_websites(db_path: Path) -> Iterator[MozPlace]:
         conn.close()
 
 
-def fetch_website_visits(db_path: Path) -> Iterator[MozPlace]:
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-
-    try:
-        cursor = conn.execute("SELECT * FROM moz_places")
-        for row in cursor:
-            yield MozPlace.model_validate(dict(row))
-    finally:
-        conn.close()
-
-
-def fetch_history_visits(db_path: Path) -> Iterator[MozHistoryVisit]:
+def fetch_website_visits(db_path: Path) -> Iterator[MozHistoryVisit]:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
 
@@ -107,10 +95,13 @@ def fetch_history_visits(db_path: Path) -> Iterator[MozHistoryVisit]:
             """
             SELECT
                 v.*,
-                p.guid AS place_guid
+                p.guid AS place_guid,
+                a.content AS downloaded_file
             FROM moz_historyvisits v
             LEFT JOIN moz_places p
                 ON p.id = v.place_id
+            LEFT JOIN moz_annos a
+                ON a.place_id = v.place_id AND a.anno_attribute_id = 1
             """
         )
 

@@ -51,6 +51,7 @@ class MozHistoryVisit(BaseModel):
     triggeringPlaceId: Optional[int] = None
 
     place_guid: Optional[str] = None
+    downloaded_file: Optional[str] = None
 
     model_config = {
         "extra": "forbid",

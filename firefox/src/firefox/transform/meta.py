@@ -33,7 +33,7 @@ class TransformRunMetadata:
             self._update_time_bounds(date)
 
     def _inc(self, key: str) -> None:
-        if self.counts[key]:
+        if self.counts.get(key):
             self.counts[key] += 1
         else:
             self.counts[key] = 1
