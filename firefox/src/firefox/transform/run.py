@@ -91,17 +91,38 @@ def fetch_website_visits(db_path: Path) -> Iterator[MozHistoryVisit]:
     conn.row_factory = sqlite3.Row
 
     try:
+        # I uniquely identify visits by place_id, visit_date and visit_type (in reality is by place_guid, but since
+        # we're looking at one db here the place_id should refer to the same place_guid).
+        # For some reason in my local I have a small percentage of duplicates. So I drop them before fetching the data
         cursor = conn.execute(
             """
-            SELECT
-                v.*,
-                p.guid AS place_guid,
-                a.content AS downloaded_file
-            FROM moz_historyvisits v
-            LEFT JOIN moz_places p
-                ON p.id = v.place_id
-            LEFT JOIN moz_annos a
-                ON a.place_id = v.place_id AND a.anno_attribute_id = 1
+WITH dedup_visits AS (
+    SELECT
+        v.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY v.place_id, v.visit_date, v.visit_type
+            ORDER BY v.id
+        ) AS rn
+    FROM moz_historyvisits v
+)
+SELECT
+    v.*,
+    p.guid AS place_guid,
+    a.content AS downloaded_file,
+    fv.visit_date AS from_visit_visit_date,
+    fv.visit_type AS from_visit_visit_type,
+    fvp.guid AS from_visit_place_guid
+FROM dedup_visits v
+LEFT JOIN moz_historyvisits fv
+    ON fv.id = v.from_visit
+LEFT JOIN moz_places fvp
+    ON fvp.id = fv.place_id
+LEFT JOIN moz_places p
+    ON p.id = v.place_id
+LEFT JOIN moz_annos a
+    ON a.place_id = v.place_id
+   AND a.anno_attribute_id = 1
+WHERE v.rn = 1;
             """
         )
 

@@ -39,6 +39,8 @@ class MozPlace(BaseModel):
 
 class MozHistoryVisit(BaseModel):
     id: int
+    # Row number, just to make pydantic happy without having to list out all of the table's columns
+    rn: int
 
     from_visit: Optional[int] = None
     place_id: Optional[int] = None
@@ -50,8 +52,15 @@ class MozHistoryVisit(BaseModel):
     source: int = Field(default=0, ge=0)
     triggeringPlaceId: Optional[int] = None
 
+    # Joined
     place_guid: Optional[str] = None
+    # Joined
     downloaded_file: Optional[str] = None
+
+    from_visit_place_guid: Optional[str] = None
+
+    from_visit_visit_date: Optional[int] = None  # microseconds since epoch
+    from_visit_visit_type: Optional[int] = None
 
     model_config = {
         "extra": "forbid",
