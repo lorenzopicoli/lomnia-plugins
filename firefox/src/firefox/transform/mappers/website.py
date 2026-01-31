@@ -17,6 +17,7 @@ def transform_website(params: WebsiteTransformerParams):
         "entityType": "website",
         "version": "1",
         "url": data.url,
+        "host": data.rev_host,
         "title": data.title,
         "description": data.description,
         "previewImageUrl": data.preview_image_url,
