@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-import jsonlines
 from dotenv import load_dotenv
 
 from hares.config import PLUGIN_NAME
@@ -22,12 +21,13 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
     metadata_file = f"{file_path}.meta.json"
 
     metadata = TransformRunMetadata()
-    log_every = 10000
-    row_count = 0
+    metadata.start()
+    # log_every = 10000
+    # row_count = 0
 
     with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
-        writer = jsonlines.Writer(gz)
-
+        # writer = jsonlines.Writer(gz)
+        print("Here", gz)
         # Example bellow of iterating over a file and writting results and logging progress
         # for row in get_rows(Path(in_dir), metadata):
         #     row_count += 1

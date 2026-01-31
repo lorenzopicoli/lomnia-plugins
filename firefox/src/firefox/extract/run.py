@@ -30,6 +30,10 @@ def run_extract(params: ExtractionParams):
 
         file_name = f"{base}_{str(uuid.uuid4()).split('-')[0]}"
         dest_path = params.out_dir / f"{file_name}.sql.gz"
+        #     "~/.mozilla/firefox/",
+        #     "~/.var/app/org.mozilla.firefox/.mozilla/firefox/",
+        #     "~/snap/firefox/common/.mozilla/firefox/",
+        #     "~/Library/Application Support/Firefox/Profiles/",
 
         earliest, latest = gzip_sqlite_dump(path, dest_path)
 

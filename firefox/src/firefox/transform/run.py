@@ -1,7 +1,10 @@
 import gzip
 import json
 import os
+import sqlite3
+import tempfile
 import uuid
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,7 +12,12 @@ import jsonlines
 from dotenv import load_dotenv
 
 from firefox.config import PLUGIN_NAME
+from firefox.transform.mappers.transformer_params import WebsiteTransformerParams
+from firefox.transform.mappers.visit import transform_website_visit
+from firefox.transform.mappers.website import transform_website
 from firefox.transform.meta import TransformRunMetadata
+from firefox.transform.models import MozHistoryVisit, MozPlace
+from firefox.transform.restore_sqlite_from_gzip_dump import restore_sqlite_from_gzip_dump
 from firefox.transform.schemas import Schemas
 
 load_dotenv()
@@ -22,26 +30,94 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
     metadata_file = f"{file_path}.meta.json"
 
     metadata = TransformRunMetadata()
+    metadata.start()
     log_every = 10000
     row_count = 0
 
-    with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
-        writer = jsonlines.Writer(gz)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        restored_dbs: list[Path] = []
+        for dump_path in Path(in_dir).iterdir():
+            if dump_path.is_file() and dump_path.name.endswith(".sql.gz"):
+                restored_db = tmpdir / dump_path.stem.replace(".sql", "")
+                restore_sqlite_from_gzip_dump(dump_path, restored_db)
+                restored_dbs.append(restored_db)
 
-        # Example bellow of iterating over a file and writting results and logging progress
-        # for row in get_rows(Path(in_dir), metadata):
-        #     row_count += 1
-        #     params = TransformerParams(device=device, schemas=schemas, metadata=metadata, data=row)
-        #
-        #     writer.write(transform_location(params))
-        #     writer.write(transform_device_status(params))
-        #     if row_count % log_every == 0:
-        #       print(
-        #          f"Processed {row_count} rows (locations={metadata.counts.get('location')}, device_status={metadata.counts.get('device_status')})"
-        #       )
+        with gzip.open(canon_file, "wt", encoding="utf-8") as gz:
+            writer = jsonlines.Writer(gz)
+
+            for db_path in restored_dbs:
+                for row in fetch_websites(db_path):
+                    row_count += 1
+                    params = WebsiteTransformerParams(schemas=schemas, metadata=metadata, place=row)
+                    writer.write(transform_website(params))
+
+                    if row_count % log_every == 0:
+                        print(
+                            f"Processed {row_count} rows "
+                            f"(location={metadata.counts.get('website')}, "
+                            f"device_status={metadata.counts.get('website_visit')})"
+                        )
+                for row in fetch_website_visits(db_path):
+                    row_count += 1
+                    params = WebsiteTransformerParams(schemas=schemas, metadata=metadata, place=row)
+                    writer.write(transform_website_visit(params))
+
+                    if row_count % log_every == 0:
+                        print(
+                            f"Processed {row_count} rows "
+                            f"(location={metadata.counts.get('website')}, "
+                            f"device_status={metadata.counts.get('website_visit')})"
+                        )
 
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
+
+
+def fetch_websites(db_path: Path) -> Iterator[MozPlace]:
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        cursor = conn.execute("SELECT * FROM moz_places")
+        for row in cursor:
+            yield MozPlace.model_validate(dict(row))
+    finally:
+        conn.close()
+
+
+def fetch_website_visits(db_path: Path) -> Iterator[MozPlace]:
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        cursor = conn.execute("SELECT * FROM moz_places")
+        for row in cursor:
+            yield MozPlace.model_validate(dict(row))
+    finally:
+        conn.close()
+
+
+def fetch_history_visits(db_path: Path) -> Iterator[MozHistoryVisit]:
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        cursor = conn.execute(
+            """
+            SELECT
+                v.*,
+                p.guid AS place_guid
+            FROM moz_historyvisits v
+            LEFT JOIN moz_places p
+                ON p.id = v.place_id
+            """
+        )
+
+        for row in cursor:
+            yield MozHistoryVisit.model_validate(dict(row))
+    finally:
+        conn.close()
 
 
 def timestamp(time: datetime) -> str:

@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from hares.config import PACKAGE_NAME
-from hares.version import get_version
+from firefox.config import PACKAGE_NAME
+from firefox.version import get_version
 
 
 @dataclass
