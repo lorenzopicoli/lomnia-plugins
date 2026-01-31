@@ -12,10 +12,12 @@ def write_meta_file(
     extract_start: datetime,
     source_path: Path,
     file_name: str,
+    data_window_start: str | None,
+    data_window_end: str | None,
 ) -> Path:
     meta = {
-        "data_window_start": None,
-        "data_window_end": None,
+        "data_window_start": data_window_start,
+        "data_window_end": data_window_end,
         "extractor_version": get_version(),
         "extractor": PACKAGE_NAME,
         "extract_start": extract_start.isoformat(),
