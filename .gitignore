@@ -212,6 +212,8 @@ __marimo__/
 
 out-dir/
 canonical-dir/
+out_dir/
+out_out_dir/
 
 .DS_Store
 
