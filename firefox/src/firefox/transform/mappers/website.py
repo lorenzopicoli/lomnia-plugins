@@ -9,6 +9,16 @@ def get_website_id(guid: str | None):
     return "firefox_" + str(guid)
 
 
+def host_from_rev_host(rev_host: str | None) -> str | None:
+    if not rev_host:
+        return None
+
+    # Firefox stores reversed hostnames with a trailing dot
+    rev_host = rev_host.rstrip(".")
+
+    return rev_host[::-1]
+
+
 def transform_website(params: WebsiteTransformerParams):
     data = params.place
     transformed = remove_none_values({
@@ -17,7 +27,7 @@ def transform_website(params: WebsiteTransformerParams):
         "entityType": "website",
         "version": "1",
         "url": data.url,
-        "host": data.rev_host,
+        "host": host_from_rev_host(data.rev_host),
         "title": data.title,
         "description": data.description,
         "previewImageUrl": data.preview_image_url,

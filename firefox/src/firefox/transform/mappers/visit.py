@@ -1,6 +1,6 @@
 import jsonschema
 
-from firefox.config import THIRD_PARTY_NAME
+from firefox.config import THIRD_PARTY_NAME, VISIT_DATE_DEDUPE_BUCKET
 from firefox.transform.mappers.transformer_params import WebsiteVisitTransformerParams
 from firefox.transform.mappers.utils.iso_utc import iso_utc
 from firefox.transform.mappers.utils.microseconds_to_datetime import microseconds_to_datetime
@@ -9,8 +9,10 @@ from firefox.transform.mappers.visit_type import transform_visit_type
 from firefox.transform.mappers.website import get_website_id
 
 
-def get_visit_id(place_guid: str | None, visit_date: int | None, visit_type: int | None):
-    return f"firefox_{place_guid!s}_{visit_date!s}_{visit_type}"
+def get_visit_id(place_guid: str | None, visit_date: int, visit_type: int | None):
+    # Visits synced across devices don't have the exact same visit date, but checking for visits to the same
+    # page, with the same type within 0.002 seconds of each other feels like a safe way to consider them the same
+    return f"firefox_{place_guid!s}_{(visit_date // VISIT_DATE_DEDUPE_BUCKET)!s}_{visit_type}"
 
 
 def transform_website_visit(params: WebsiteVisitTransformerParams):

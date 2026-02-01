@@ -11,7 +11,7 @@ from pathlib import Path
 import jsonlines
 from dotenv import load_dotenv
 
-from firefox.config import PLUGIN_NAME
+from firefox.config import PLUGIN_NAME, VISIT_DATE_DEDUPE_BUCKET
 from firefox.transform.mappers.transformer_params import WebsiteTransformerParams, WebsiteVisitTransformerParams
 from firefox.transform.mappers.visit import transform_website_visit
 from firefox.transform.mappers.website import transform_website
@@ -100,7 +100,8 @@ WITH dedup_visits AS (
     SELECT
         v.*,
         ROW_NUMBER() OVER (
-            PARTITION BY v.place_id, v.visit_date, v.visit_type
+        -- SQLite does integer division when both sides are integers
+            PARTITION BY v.place_id, (v.visit_date / ?), v.visit_type
             ORDER BY v.id
         ) AS rn
     FROM moz_historyvisits v
@@ -123,7 +124,8 @@ LEFT JOIN moz_annos a
     ON a.place_id = v.place_id
    AND a.anno_attribute_id = 1
 WHERE v.rn = 1;
-            """
+            """,
+            (VISIT_DATE_DEDUPE_BUCKET,),
         )
 
         for row in cursor:

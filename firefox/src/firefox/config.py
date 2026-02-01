@@ -1,3 +1,5 @@
 PLUGIN_NAME = "firefox"
 THIRD_PARTY_NAME = "firefox"
 PACKAGE_NAME = "firefox"
+
+VISIT_DATE_DEDUPE_BUCKET = 1000

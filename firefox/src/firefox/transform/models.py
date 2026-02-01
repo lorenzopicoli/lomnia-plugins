@@ -45,7 +45,7 @@ class MozHistoryVisit(BaseModel):
     from_visit: Optional[int] = None
     place_id: Optional[int] = None
 
-    visit_date: Optional[int] = None  # microseconds since epoch
+    visit_date: int  # microseconds since epoch
     visit_type: Optional[int] = None
     session: Optional[int] = None
 
