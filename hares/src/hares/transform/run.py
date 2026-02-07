@@ -40,14 +40,13 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    def fetch_tracker_name(tracker_id: int) -> str | None:
+    def fetch_tracker(tracker_id: int) -> sqlite3.Row:
         cursor.execute(
-            "SELECT name FROM trackers WHERE id = ?",
+            "SELECT * FROM trackers WHERE id = ?",
             (tracker_id,),
         )
         row = cursor.fetchone()
-        name = row["name"] if row else None
-        return name
+        return row
 
     def fetch_text_list(habit_entry_id: int) -> list[str]:
         cursor.execute(
@@ -72,7 +71,7 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 row=row,
                 schemas=schemas,
                 metadata=metadata,
-                fetch_tracker_name=fetch_tracker_name,
+                fetch_tracker=fetch_tracker,
                 fetch_text_list=fetch_text_list,
             )
 

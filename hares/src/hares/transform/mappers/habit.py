@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import datetime
 from typing import Any, Callable
 
@@ -8,7 +9,7 @@ from hares.transform.mappers.utils.unitx_to_utc_iso import unix_to_utc_iso
 from hares.transform.meta import TransformRunMetadata
 from hares.transform.schemas import Schemas
 
-FetchTrackerName = Callable[[int], str | None]
+FetchTracker = Callable[[int], sqlite3.Row]
 FetchTextList = Callable[[int], list[str] | None]
 
 
@@ -27,14 +28,15 @@ def transform_habit(
     row: dict[str, Any],
     metadata: TransformRunMetadata,
     schemas: Schemas,
-    fetch_tracker_name: FetchTrackerName,
+    fetch_tracker: FetchTracker,
     fetch_text_list: FetchTextList,
 ) -> dict[str, Any]:
+    tracker = fetch_tracker(row["tracker_id"])
     transformed = {
         "entityType": "habit",
         "version": "1",
         "id": "hares_" + str(row["id"]),
-        "key": fetch_tracker_name(row["tracker_id"]),
+        "key": tracker["name"],
         "date": unix_to_utc_iso(row["date"]),
         "source": PLUGIN_NAME,
         "timezone": row["timezone"],
@@ -48,6 +50,11 @@ def transform_habit(
         value = fetch_text_list(row["id"])
 
     transformed["value"] = value
+
+    if tracker["prefix"]:
+        transformed["valuePrefix"] = tracker["prefix"]
+    if tracker["suffix"]:
+        transformed["valueSuffix"] = tracker["suffix"]
 
     if row.get("comment"):
         transformed["comments"] = row["comment"]
