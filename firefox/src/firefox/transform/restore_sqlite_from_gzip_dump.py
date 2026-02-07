@@ -1,7 +1,9 @@
-import subprocess
+import gzip
+import sqlite3
 from pathlib import Path
 
 
+# Maybe stop loading everything into memory in the future
 def restore_sqlite_from_gzip_dump(
     dump_gz_path: Path,
     output_sqlite_path: Path,
@@ -15,13 +17,13 @@ def restore_sqlite_from_gzip_dump(
     if output_sqlite_path.exists():
         output_sqlite_path.unlink()
 
-    subprocess.run(  # noqa: S603
-        ["sqlite3", str(output_sqlite_path)],  # noqa: S607
-        stdin=subprocess.Popen(  # noqa: S603
-            ["gzip", "-dc", str(dump_gz_path)],  # noqa: S607
-            stdout=subprocess.PIPE,
-        ).stdout,
-        check=True,
-    )
+    conn = sqlite3.connect(output_sqlite_path)
+
+    try:
+        with gzip.open(dump_gz_path, mode="rt", encoding="utf-8") as f:
+            sql = f.read()
+            conn.executescript(sql)
+    finally:
+        conn.close()
 
     return output_sqlite_path
