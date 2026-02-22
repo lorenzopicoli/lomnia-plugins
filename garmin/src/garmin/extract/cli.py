@@ -1,4 +1,6 @@
 import argparse
+import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -8,6 +10,13 @@ from dotenv import load_dotenv
 from garmin.extract.run import ExtractionParams, run_extract
 
 load_dotenv()
+
+
+@dataclass
+class EnvVars:
+    username: str = os.environ["GARMIN_USERNAME"]
+    email: str = os.environ["GARMIN_EMAIL"]
+    password: str = os.environ["GARMIN_PASSWORD"]
 
 
 class ExtractorArgs(NamedTuple):
@@ -47,12 +56,20 @@ def parse_extract_args() -> ExtractorArgs:
 
 def extract():
     args = parse_extract_args()
+    env = EnvVars()
 
     print("Start date:", args.start_date)
     print("Input dir:", args.in_dir)
     print("Output dir:", args.out_dir)
 
-    params = ExtractionParams(start_date=args.start_date, out_dir=args.out_dir, in_dir=args.in_dir)
+    params = ExtractionParams(
+        start_date=args.start_date,
+        out_dir=args.out_dir,
+        in_dir=args.in_dir,
+        username=env.username,
+        email=env.email,
+        password=env.password,
+    )
     run_extract(params)
 
 

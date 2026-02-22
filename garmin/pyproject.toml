@@ -19,6 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "dotenv>=0.9.9",
+    "garth>=0.6.3",
     "httpx>=0.28.1",
     "jsonlines>=4.0.0",
     "jsonschema>=4.25.1",

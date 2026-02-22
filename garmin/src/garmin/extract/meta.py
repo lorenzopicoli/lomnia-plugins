@@ -10,7 +10,6 @@ def write_meta_file(
     *,
     out_dir: Path,
     extract_start: datetime,
-    source_path: Path,
     file_name: str,
 ) -> Path:
     meta = {
@@ -20,7 +19,6 @@ def write_meta_file(
         "extractor": PACKAGE_NAME,
         "extract_start": extract_start.isoformat(),
         "extract_end": datetime.now(timezone.utc).isoformat(),
-        "source_path": str(source_path),
     }
 
     meta_name = f"{file_name}.meta.json"
