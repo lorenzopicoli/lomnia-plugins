@@ -1,12 +1,16 @@
 import json
 import os
+import re
 import tarfile
 import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
+from garth.data.sleep import SleepData
+from garth.utils import camel_to_snake_dict
 
 from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
 from garmin.transform.meta import TransformRunMetadata
@@ -30,19 +34,14 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
         tmp_path = Path(tmp_dir)
 
         for archive in Path(in_dir).glob("*.tar.gz"):
-            print("found archive", archive)
+            print("Found archive", archive)
             with tarfile.open(archive, "r:gz") as tar:
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
-
-        for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
-            print("Found sleep file", sleep_file)
-        for weight in (Path(tmp_path) / WEIGHT_FOLDER).glob("*.json"):
-            print("Found weight file", weight)
-        for hr in (Path(tmp_path) / HR_FOLDER).glob("*.json"):
-            print("Found hr file", hr)
-        for activity in (Path(tmp_path) / ACTIVITY_FOLDER).glob("*.fit"):
-            print("Found activit file", activity)
+            process_sleep_files(tmp_path)
+            process_hr_files(tmp_path)
+            process_weight_files(tmp_path)
+            process_activity_files(tmp_path)
 
         # writer = jsonlines.Writer(gz)
         # Example bellow of iterating over a file and writting results and logging progress
@@ -59,6 +58,43 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
 
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
+
+
+def to_snake(s):
+    return re.sub(r"([A-Z]\w+$)", "_\\1", s).lower()
+
+
+def t_dict(d: Any) -> Any:
+    if isinstance(d, list):
+        return [t_dict(i) for i in d]
+
+    if isinstance(d, dict):
+        return {to_snake(str(a)): t_dict(b) for a, b in d.items()}
+
+    return d
+
+
+def process_sleep_files(tmp_path: Path):
+    for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
+        raw = json.loads(Path(sleep_file).read_text())
+        data = camel_to_snake_dict(raw)
+        sleep = SleepData(**data)
+        print("Found sleep file", sleep)
+
+
+def process_hr_files(tmp_path: Path):
+    for hr in (Path(tmp_path) / HR_FOLDER).glob("*.json"):
+        print("Found hr file", hr)
+
+
+def process_weight_files(tmp_path: Path):
+    for weight in (Path(tmp_path) / WEIGHT_FOLDER).glob("*.json"):
+        print("Found weight file", weight)
+
+
+def process_activity_files(tmp_path: Path):
+    for activity in (Path(tmp_path) / ACTIVITY_FOLDER).glob("*.fit"):
+        print("Found activity file", activity)
 
 
 def timestamp(time: datetime) -> str:
