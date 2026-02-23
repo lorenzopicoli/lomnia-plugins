@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from garth.data.sleep import SleepData
-from garth.utils import camel_to_snake_dict
 
 from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.transform.mappers.sleep_movements import sleep_movement_to_stage
 from garmin.transform.meta import TransformRunMetadata
+from garmin.transform.models.sleep import Sleep
 from garmin.transform.schemas import Schemas
 
 load_dotenv()
@@ -77,9 +77,8 @@ def t_dict(d: Any) -> Any:
 def process_sleep_files(tmp_path: Path):
     for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
         raw = json.loads(Path(sleep_file).read_text())
-        data = camel_to_snake_dict(raw)
-        sleep = SleepData(**data)
-        print("Found sleep file", sleep)
+        sleep = Sleep(**raw)
+        sleep_movement_to_stage(sleep)
 
 
 def process_hr_files(tmp_path: Path):
