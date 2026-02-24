@@ -1,13 +1,13 @@
+import gzip
 import json
 import os
-import re
 import tarfile
 import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
+import jsonlines
 from dotenv import load_dotenv
 
 from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
@@ -31,7 +31,8 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
     # log_every = 10000
     # row_count = 0
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir, gzip.open(canon_file, "wt", encoding="utf-8") as gz:
+        writer = jsonlines.Writer(gz)
         tmp_path = Path(tmp_dir)
 
         for archive in Path(in_dir).glob("*.tar.gz"):
@@ -39,48 +40,26 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
             with tarfile.open(archive, "r:gz") as tar:
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
-            process_sleep_files(tmp_path, metadata, schemas)
-            process_hr_files(tmp_path)
-            process_weight_files(tmp_path)
-            process_activity_files(tmp_path)
-
-        # writer = jsonlines.Writer(gz)
-        # Example bellow of iterating over a file and writting results and logging progress
-        # for row in get_rows(Path(in_dir), metadata):
-        #     row_count += 1
-        #     params = TransformerParams(device=device, schemas=schemas, metadata=metadata, data=row)
-        #
-        #     writer.write(transform_location(params))
-        #     writer.write(transform_device_status(params))
-        #     if row_count % log_every == 0:
-        #       print(
-        #          f"Processed {row_count} rows (locations={metadata.counts.get('location')}, device_status={metadata.counts.get('device_status')})"
-        #       )
-
+            transformed = process_sleep_files(tmp_path, metadata, schemas)
+            writer.write(transformed)
+            # transformed =process_hr_files(tmp_path)
+            # writer.write(transformed)
+            # transformed =process_weight_files(tmp_path)
+            # writer.write(transformed)
+            # transformed =process_activity_files(tmp_path)
+            # writer.write(transformed)
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
 
 
-def to_snake(s):
-    return re.sub(r"([A-Z]\w+$)", "_\\1", s).lower()
-
-
-def t_dict(d: Any) -> Any:
-    if isinstance(d, list):
-        return [t_dict(i) for i in d]
-
-    if isinstance(d, dict):
-        return {to_snake(str(a)): t_dict(b) for a, b in d.items()}
-
-    return d
-
-
 def process_sleep_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
+    result = []
     for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
         raw = json.loads(Path(sleep_file).read_text())
         sleep = Sleep(**raw)
-        transform_sleep(sleep=sleep, metadata=metadata, schemas=schemas)
-        transform_sleep_stage(sleep=sleep, metadata=metadata, schemas=schemas)
+        result.append(transform_sleep(sleep=sleep, metadata=metadata, schemas=schemas))
+        result.extend(transform_sleep_stage(sleep=sleep, metadata=metadata, schemas=schemas))
+    return result
 
 
 def process_hr_files(tmp_path: Path):

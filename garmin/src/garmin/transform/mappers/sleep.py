@@ -19,7 +19,6 @@ def transform_sleep(
 ) -> dict[str, Any]:
     dto = sleep.dailySleepDTO
 
-    print(dto.sleepStartTimestampGMT)
     started_at = to_utc_iso_from_epoch(dto.sleepStartTimestampGMT)
     ended_at = to_utc_iso_from_epoch(dto.sleepEndTimestampGMT)
 

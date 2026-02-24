@@ -35,7 +35,7 @@ def transform_sleep_stage(
 
         transformed: dict[str, Any] = {
             "id": f"{get_sleep_id(sleep)}_{hash_interval(started_at, ended_at)}",
-            "entityType": "sleep_stage",
+            "entityType": "sleepStage",
             "version": "1",
             "source": PLUGIN_NAME,
             "startedAt": started_at,
