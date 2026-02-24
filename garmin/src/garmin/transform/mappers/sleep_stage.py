@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +10,11 @@ from garmin.transform.mappers.utils.iso_utc import iso_utc
 from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.models.sleep import Sleep
 from garmin.transform.schemas import Schemas
+
+
+def hash_interval(started_at: str, ended_at: str) -> str:
+    raw = f"{started_at}|{ended_at}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def transform_sleep_stage(
@@ -28,7 +34,8 @@ def transform_sleep_stage(
         ended_at = iso_utc(end)
 
         transformed: dict[str, Any] = {
-            "entityType": "sleep",
+            "id": f"{get_sleep_id(sleep)}_{hash_interval(started_at, ended_at)}",
+            "entityType": "sleep_stage",
             "version": "1",
             "source": PLUGIN_NAME,
             "startedAt": started_at,
