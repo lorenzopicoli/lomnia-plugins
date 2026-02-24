@@ -27,9 +27,9 @@ class TransformRunMetadata:
     def start(self) -> None:
         self.start_date = datetime.now(timezone.utc)
 
-    def record(self, entity: str, date: datetime | None) -> None:
+    def record(self, entity: str, dates: list[datetime]) -> None:
         self._inc(entity)
-        if date is not None:
+        for date in dates:
             self._update_time_bounds(date)
 
     def _inc(self, key: str) -> None:

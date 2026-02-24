@@ -11,7 +11,8 @@ from typing import Any
 from dotenv import load_dotenv
 
 from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
-from garmin.transform.mappers.sleep_movements import sleep_movement_to_stage
+from garmin.transform.mappers.sleep import transform_sleep
+from garmin.transform.mappers.sleep_stage import transform_sleep_stage
 from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.models.sleep import Sleep
 from garmin.transform.schemas import Schemas
@@ -38,7 +39,7 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
             with tarfile.open(archive, "r:gz") as tar:
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
-            process_sleep_files(tmp_path)
+            process_sleep_files(tmp_path, metadata, schemas)
             process_hr_files(tmp_path)
             process_weight_files(tmp_path)
             process_activity_files(tmp_path)
@@ -74,11 +75,12 @@ def t_dict(d: Any) -> Any:
     return d
 
 
-def process_sleep_files(tmp_path: Path):
+def process_sleep_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
     for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
         raw = json.loads(Path(sleep_file).read_text())
         sleep = Sleep(**raw)
-        sleep_movement_to_stage(sleep)
+        transform_sleep(sleep=sleep, metadata=metadata, schemas=schemas)
+        transform_sleep_stage(sleep=sleep, metadata=metadata, schemas=schemas)
 
 
 def process_hr_files(tmp_path: Path):
