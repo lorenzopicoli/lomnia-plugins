@@ -41,7 +41,8 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
             transformed = process_sleep_files(tmp_path, metadata, schemas)
-            writer.write(transformed)
+            for line in transformed:
+                writer.write(line)
             # transformed =process_hr_files(tmp_path)
             # writer.write(transformed)
             # transformed =process_weight_files(tmp_path)
