@@ -160,6 +160,7 @@ class SleepMovementItem(BaseModel):
 
 
 STAGE_NAMES = {
+    -1.0: "unmeasurable",
     0.0: "deep",
     1.0: "light",
     2.0: "rem",
