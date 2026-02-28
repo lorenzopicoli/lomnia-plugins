@@ -11,9 +11,11 @@ import jsonlines
 from dotenv import load_dotenv
 
 from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.transform.mappers.hr import transform_hr
 from garmin.transform.mappers.sleep import transform_sleep
 from garmin.transform.mappers.sleep_stage import transform_sleep_stage
 from garmin.transform.meta import TransformRunMetadata
+from garmin.transform.models.hr import HeartRate
 from garmin.transform.models.sleep import Sleep
 from garmin.transform.schemas import Schemas
 
@@ -43,8 +45,9 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
             transformed = process_sleep_files(tmp_path, metadata, schemas)
             for line in transformed:
                 writer.write(line)
-            # transformed =process_hr_files(tmp_path)
-            # writer.write(transformed)
+            transformed = process_hr_files(tmp_path, metadata, schemas)
+            for line in transformed:
+                writer.write(line)
             # transformed =process_weight_files(tmp_path)
             # writer.write(transformed)
             # transformed =process_activity_files(tmp_path)
@@ -63,9 +66,13 @@ def process_sleep_files(tmp_path: Path, metadata: TransformRunMetadata, schemas:
     return result
 
 
-def process_hr_files(tmp_path: Path):
+def process_hr_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
+    result = []
     for hr in (Path(tmp_path) / HR_FOLDER).glob("*.json"):
-        print("Found hr file", hr)
+        raw = json.loads(Path(hr).read_text())
+        hr = HeartRate(**raw)
+        result.append(transform_hr(hr=hr, metadata=metadata, schemas=schemas))
+    return result
 
 
 def process_weight_files(tmp_path: Path):
