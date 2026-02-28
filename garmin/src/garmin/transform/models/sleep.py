@@ -203,7 +203,7 @@ class WellnessEpochSPO2DataDTOListItem(BaseModel):
     deviceId: int
     calendarDate: str
     epochDuration: int
-    spo2Reading: int
+    spo2Reading: int | None
     readingConfidence: int
 
 
@@ -220,7 +220,7 @@ class WellnessEpochRespirationAveragesListItem(BaseModel):
 
 
 class SleepHeartRateItem(BaseModel):
-    value: int
+    value: int | None
     startGMT: int
 
 
