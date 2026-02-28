@@ -13,6 +13,7 @@ from garmin.transform.schemas import Schemas
 def transform_hr(
     *,
     hr: HeartRate,
+    deviceId: str,
     metadata: TransformRunMetadata,
     schemas: Schemas,
 ) -> list[dict[str, Any]]:
@@ -27,6 +28,8 @@ def transform_hr(
         if bpm is None:
             continue
 
+        if timestamp_ms is None:
+            raise
         timestamp = to_utc_iso_from_epoch(timestamp_ms)
 
         transformed: dict[str, Any] = {
@@ -36,6 +39,7 @@ def transform_hr(
             "source": PLUGIN_NAME,
             "recordedAt": timestamp,
             "heartRate": bpm,
+            "deviceId": deviceId,
         }
         if schemas.heart_rate is not None:
             try:

@@ -14,6 +14,7 @@ from garmin.transform.schemas import Schemas
 def transform_sleep(
     *,
     sleep: Sleep,
+    deviceId: str,
     metadata: TransformRunMetadata,
     schemas: Schemas,
 ) -> dict[str, Any]:
@@ -30,8 +31,7 @@ def transform_sleep(
         "startedAt": started_at,
         "endedAt": ended_at,
         "automaticScore": dto.sleepScores.overall.value,
-        # For me it's safe to take that since i only have a watch
-        "deviceId": str(sleep.wellnessSpO2SleepSummaryDTO.deviceId),
+        "deviceId": deviceId,
     }
 
     if schemas.sleep is not None:

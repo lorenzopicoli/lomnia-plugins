@@ -20,6 +20,7 @@ def hash_interval(started_at: str, ended_at: str) -> str:
 def transform_sleep_stage(
     *,
     sleep: Sleep,
+    deviceId: str,
     metadata: TransformRunMetadata,
     schemas: Schemas,
 ) -> list[dict[str, Any]]:
@@ -42,8 +43,7 @@ def transform_sleep_stage(
             "endedAt": ended_at,
             "type": stage,
             "sleepId": get_sleep_id(sleep),
-            # For me it's safe to take that since i only have a watch
-            "deviceId": str(sleep.wellnessSpO2SleepSummaryDTO.deviceId),
+            "deviceId": deviceId,
         }
 
         if schemas.sleep_stage is not None:

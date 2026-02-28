@@ -18,6 +18,9 @@ SLEEP_STAGE_SCHEMA_URL = (
 HEART_RATE_SCHEMA_URL = (
     "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/heart_rate.schema.json"
 )
+DEVICE_SCHEMA_URL = (
+    "https://raw.githubusercontent.com/lorenzopicoli/lomnia/refs/heads/main/backend/schemas/device.schema.json"
+)
 
 
 @dataclass
@@ -25,6 +28,7 @@ class SchemaEnvVars:
     local_sleep_schema: Optional[str] = os.getenv("SLEEP_SCHEMA_LOCAL")
     local_sleep_stage_schema: Optional[str] = os.getenv("SLEEP_STAGE_SCHEMA_LOCAL")
     local_heart_rate_schema: Optional[str] = os.getenv("HEART_RATE_SCHEMA_LOCAL")
+    local_dev_schema: Optional[str] = os.getenv("DEVICE_SCHEMA_LOCAL")
     skip_schema_check: bool = os.environ.get("SKIP_SCHEMA_CHECK", "").lower() in ("1", "true", "yes", "on")
 
 
@@ -32,6 +36,7 @@ class Schemas(NamedTuple):
     sleep: Any
     sleep_stage: Any
     heart_rate: Any
+    device: Any
     skip_schema_check: bool
 
 
@@ -59,5 +64,8 @@ def get_schemas():
         if not env.skip_schema_check
         else None
     )
+    device_schema = (
+        load_schema(local=env.local_dev_schema, default_url=DEVICE_SCHEMA_URL) if not env.skip_schema_check else None
+    )
 
-    return Schemas(sleep_schema, sleep_stage_schema, heart_rate_schema, env.skip_schema_check)
+    return Schemas(sleep_schema, sleep_stage_schema, heart_rate_schema, device_schema, env.skip_schema_check)

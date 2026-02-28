@@ -10,11 +10,13 @@ from pathlib import Path
 import jsonlines
 from dotenv import load_dotenv
 
-from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.transform.mappers.device import transform_device
 from garmin.transform.mappers.hr import transform_hr
 from garmin.transform.mappers.sleep import transform_sleep
 from garmin.transform.mappers.sleep_stage import transform_sleep_stage
 from garmin.transform.meta import TransformRunMetadata
+from garmin.transform.models.device import Device
 from garmin.transform.models.hr import HeartRate
 from garmin.transform.models.sleep import Sleep
 from garmin.transform.schemas import Schemas
@@ -36,16 +38,21 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
     with tempfile.TemporaryDirectory() as tmp_dir, gzip.open(canon_file, "wt", encoding="utf-8") as gz:
         writer = jsonlines.Writer(gz)
         tmp_path = Path(tmp_dir)
-
         for archive in Path(in_dir).glob("*.tar.gz"):
             print("Found archive", archive)
             with tarfile.open(archive, "r:gz") as tar:
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
-            transformed = process_sleep_files(tmp_path, metadata, schemas)
+
+            transformed = process_device_files(tmp_path, metadata, schemas)
             for line in transformed:
                 writer.write(line)
-            transformed = process_hr_files(tmp_path, metadata, schemas)
+            # Fine to assume just one for my use case
+            deviceId = transformed[0]["id"]
+            transformed = process_sleep_files(tmp_path, deviceId, metadata, schemas)
+            for line in transformed:
+                writer.write(line)
+            transformed = process_hr_files(tmp_path, deviceId, metadata, schemas)
             for line in transformed:
                 writer.write(line)
             # transformed =process_weight_files(tmp_path)
@@ -56,22 +63,31 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
         json.dump(metadata.to_dict(), f, indent=2)
 
 
-def process_sleep_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
+def process_sleep_files(tmp_path: Path, deviceId: str, metadata: TransformRunMetadata, schemas: Schemas):
     result = []
     for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
         raw = json.loads(Path(sleep_file).read_text())
         sleep = Sleep(**raw)
-        result.append(transform_sleep(sleep=sleep, metadata=metadata, schemas=schemas))
-        result.extend(transform_sleep_stage(sleep=sleep, metadata=metadata, schemas=schemas))
+        result.append(transform_sleep(sleep=sleep, deviceId=deviceId, metadata=metadata, schemas=schemas))
+        result.extend(transform_sleep_stage(sleep=sleep, deviceId=deviceId, metadata=metadata, schemas=schemas))
     return result
 
 
-def process_hr_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
+def process_hr_files(tmp_path: Path, deviceId: str, metadata: TransformRunMetadata, schemas: Schemas):
     result = []
     for hr in (Path(tmp_path) / HR_FOLDER).glob("*.json"):
         raw = json.loads(Path(hr).read_text())
         hr = HeartRate(**raw)
-        result.append(transform_hr(hr=hr, metadata=metadata, schemas=schemas))
+        result.extend(transform_hr(hr=hr, deviceId=deviceId, metadata=metadata, schemas=schemas))
+    return result
+
+
+def process_device_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
+    result = []
+    for device in (Path(tmp_path) / DEVICE_FOLDER).glob("*.json"):
+        raw = json.loads(Path(device).read_text())
+        device = Device(**raw)
+        result.extend(transform_device(device=device, metadata=metadata, schemas=schemas))
     return result
 
 

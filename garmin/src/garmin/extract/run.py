@@ -12,7 +12,7 @@ from time import sleep
 
 import garth
 
-from garmin.config import ACTIVITY_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
 from garmin.extract.meta import write_meta_file
 
 
@@ -31,6 +31,7 @@ garmin_connect_sleep_daily_url = "/wellness-service/wellness/dailySleepData"
 garmin_connect_daily_heart_rate = "/wellness-service/wellness/dailyHeartRate"
 garmin_connect_weight_url = "/weight-service/weight/dateRange"
 garmin_connect_download_service_url = "/download-service/files"
+garmin_connect_device_url = "/web-gateway/device-info/primary-training-device"
 
 
 def run_extract(params: ExtractionParams):
@@ -40,6 +41,7 @@ def run_extract(params: ExtractionParams):
     day_delay = 2
 
     curr_date = params.start_date
+    fetch_device_data(params, file_id)
     while curr_date < datetime.now(tz=timezone.utc) - timedelta(days=day_delay):
         fetch_data_for_day(params, curr_date, file_id)
         curr_date = curr_date + timedelta(days=1)
@@ -54,6 +56,15 @@ def run_extract(params: ExtractionParams):
         file_name=final_file_name,
         extract_start=extract_start,
     )
+
+
+def fetch_device_data(params: ExtractionParams, file_id: str):
+    device_data_file = params.out_dir / DEVICE_FOLDER / f"{file_id}_device_data.json"
+    device_data_file.parent.mkdir(parents=True, exist_ok=True)
+    device_data = garth.connectapi(
+        f"{garmin_connect_device_url}",
+    )
+    device_data_file.write_text(json.dumps(device_data, indent=2))
 
 
 def fetch_data_for_day(params: ExtractionParams, current_day: datetime, file_id: str):
