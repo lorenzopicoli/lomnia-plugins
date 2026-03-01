@@ -46,7 +46,7 @@ def run_extract(params: ExtractionParams):
         fetch_data_for_day(params, curr_date, file_id)
         curr_date = curr_date + timedelta(days=1)
         sleep(1)
-
+    fetch_activity_data(params, file_id)
     start_day = params.start_date.strftime("%Y-%m-%d")
     end_day = curr_date.strftime("%Y-%m-%d")
     final_file_name = f"{PLUGIN_NAME}_{start_day}_{end_day}_{file_id}"
@@ -64,7 +64,66 @@ def fetch_device_data(params: ExtractionParams, file_id: str):
     device_data = garth.connectapi(
         f"{garmin_connect_device_url}",
     )
-    device_data_file.write_text(json.dumps(device_data, indent=2))
+    device_data_file.write_text(json.dumps(device_data))
+
+
+def fetch_activity_data(params: ExtractionParams, file_id: str):
+    day = params.start_date.strftime("%Y-%m-%d")
+    prefix = f"{day}_{file_id}"
+
+    activity_dir = params.out_dir / ACTIVITY_FOLDER
+    activity_dir.mkdir(parents=True, exist_ok=True)
+    activity_mapping_file = params.out_dir / ACTIVITY_FOLDER / f"{prefix}_activity_mapping.json"
+    activity_mapping = {}
+    client = garth.Client()
+
+    limit = 10
+    offset = 0
+    should_continue = True
+
+    while should_continue:
+        activities = garth.Activity.list(limit=limit, start=offset)
+
+        if not activities:
+            break
+
+        for activity in activities:
+            activity_start = activity.start_time_gmt
+            if activity_start is None:
+                continue
+
+            if activity_start.astimezone(timezone.utc) < params.start_date.astimezone(timezone.utc):
+                should_continue = False
+                break
+            print(f"Processing activity {activity.start_time_gmt}: {activity.activity_name}")
+            activity_mapping[activity.activity_id] = activity.activity_name
+            result = client.get(
+                "connectapi",
+                f"{garmin_connect_download_service_url}/activity/{activity.activity_id}",
+            )
+
+            activity_zip = activity_dir / f"{prefix}_activity_{activity.activity_id}.zip"
+
+            with open(activity_zip, "wb") as file:
+                for chunk in result:
+                    file.write(chunk)
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with zipfile.ZipFile(activity_zip, "r") as zip_ref:
+                    zip_ref.extractall(tmpdir)  # noqa: S202
+
+                for extracted in Path(tmpdir).iterdir():
+                    if extracted.is_file():
+                        new_name = f"{prefix}_{extracted.name}"
+                        shutil.move(str(extracted), activity_dir / new_name)
+
+            os.remove(activity_zip)
+
+        offset += limit
+    activity_mapping_file.write_text(
+        json.dumps(activity_mapping, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def fetch_data_for_day(params: ExtractionParams, current_day: datetime, file_id: str):
@@ -87,50 +146,21 @@ def fetch_data_for_day(params: ExtractionParams, current_day: datetime, file_id:
         f"{garmin_connect_sleep_daily_url}/{name}",
         params=query_params,
     )
-    sleep_data_file.write_text(json.dumps(sleep_data, indent=2))
+    sleep_data_file.write_text(json.dumps(sleep_data))
 
     query_params = {"date": day}
     hr_data = garth.connectapi(
         garmin_connect_daily_heart_rate,
         params=query_params,
     )
-    hr_file.write_text(json.dumps(hr_data, indent=2))
+    hr_file.write_text(json.dumps(hr_data))
 
     query_params = {"startDate": day, "endDate": day}
     weight_data = garth.connectapi(
         garmin_connect_weight_url,
         params=query_params,
     )
-    weight_file.write_text(json.dumps(weight_data, indent=2))
-
-    activity_dir = params.out_dir / ACTIVITY_FOLDER
-    activity_dir.mkdir(parents=True, exist_ok=True)
-
-    client = garth.Client()
-    activities = garth.Activity.list(limit=10, start=0)
-
-    for activity in activities:
-        result = client.get(
-            "connectapi",
-            f"{garmin_connect_download_service_url}/activity/{activity.activity_id}",
-        )
-
-        activity_zip = activity_dir / f"{prefix}_activity_{activity.activity_id}.zip"
-
-        with open(activity_zip, "wb") as file:
-            for chunk in result:
-                file.write(chunk)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with zipfile.ZipFile(activity_zip, "r") as zip_ref:
-                zip_ref.extractall(tmpdir)  # noqa: S202
-
-            for extracted in Path(tmpdir).iterdir():
-                if extracted.is_file():
-                    new_name = f"{prefix}_{extracted.name}"
-                    shutil.move(str(extracted), activity_dir / new_name)
-
-        os.remove(activity_zip)
+    weight_file.write_text(json.dumps(weight_data))
 
 
 def archive_in_place(source_dir: str, file_name: str):

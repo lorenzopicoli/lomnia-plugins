@@ -10,7 +10,7 @@ from pathlib import Path
 import jsonlines
 from dotenv import load_dotenv
 
-from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.config import DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
 from garmin.transform.mappers.device import transform_device
 from garmin.transform.mappers.hr import transform_hr
 from garmin.transform.mappers.sleep import transform_sleep
@@ -19,6 +19,7 @@ from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.models.device import Device
 from garmin.transform.models.hr import HeartRate
 from garmin.transform.models.sleep import Sleep
+from garmin.transform.parsers.activity import process_activity_files
 from garmin.transform.schemas import Schemas
 
 load_dotenv()
@@ -45,19 +46,19 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 tar.extractall(path=tmp_path)  # noqa: S202
 
             transformed = process_device_files(tmp_path, metadata, schemas)
-            for line in transformed:
-                writer.write(line)
+            # for line in transformed:
+            #     writer.write(line)
             # Fine to assume just one for my use case
             deviceId = transformed[0]["id"]
-            transformed = process_sleep_files(tmp_path, deviceId, metadata, schemas)
-            for line in transformed:
-                writer.write(line)
-            transformed = process_hr_files(tmp_path, deviceId, metadata, schemas)
-            for line in transformed:
-                writer.write(line)
+            # transformed = process_sleep_files(tmp_path, deviceId, metadata, schemas)
+            # for line in transformed:
+            #     writer.write(line)
+            # transformed = process_hr_files(tmp_path, deviceId, metadata, schemas)
+            # for line in transformed:
+            #     writer.write(line)
             # transformed =process_weight_files(tmp_path)
             # writer.write(transformed)
-            # transformed =process_activity_files(tmp_path)
+            transformed = process_activity_files(tmp_path, metadata, schemas)
             # writer.write(transformed)
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
@@ -94,11 +95,6 @@ def process_device_files(tmp_path: Path, metadata: TransformRunMetadata, schemas
 def process_weight_files(tmp_path: Path):
     for weight in (Path(tmp_path) / WEIGHT_FOLDER).glob("*.json"):
         print("Found weight file", weight)
-
-
-def process_activity_files(tmp_path: Path):
-    for activity in (Path(tmp_path) / ACTIVITY_FOLDER).glob("*.fit"):
-        print("Found activity file", activity)
 
 
 def timestamp(time: datetime) -> str:
