@@ -18,6 +18,7 @@ class TransformRunMetadata:
     max_date: Optional[datetime] = None
 
     start_date: Optional[datetime] = None
+    activity_mapping: dict[str, str] = field(default_factory=lambda: {})
 
     counts: dict[str, int] = field(default_factory=lambda: {})
 

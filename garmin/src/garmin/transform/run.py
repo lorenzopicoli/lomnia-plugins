@@ -10,7 +10,7 @@ from pathlib import Path
 import jsonlines
 from dotenv import load_dotenv
 
-from garmin.config import DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
 from garmin.transform.mappers.device import transform_device
 from garmin.transform.mappers.hr import transform_hr
 from garmin.transform.mappers.sleep import transform_sleep
@@ -44,7 +44,7 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
             with tarfile.open(archive, "r:gz") as tar:
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
-
+            metadata.activity_mapping = read_activity_mapping(tmp_path)
             transformed = process_device_files(tmp_path, metadata, schemas)
             # for line in transformed:
             #     writer.write(line)
@@ -95,6 +95,24 @@ def process_device_files(tmp_path: Path, metadata: TransformRunMetadata, schemas
 def process_weight_files(tmp_path: Path):
     for weight in (Path(tmp_path) / WEIGHT_FOLDER).glob("*.json"):
         print("Found weight file", weight)
+
+
+def read_activity_mapping(base_path: Path) -> dict[str, str]:
+    activity_dir = base_path / ACTIVITY_FOLDER
+
+    if not activity_dir.exists():
+        return {}
+
+    matches = list(activity_dir.glob("*_activity_mapping.json"))
+
+    if not matches:
+        return {}
+
+    mapping_file = max(matches, key=lambda p: p.stat().st_mtime)
+
+    raw = json.loads(mapping_file.read_text(encoding="utf-8"))
+
+    return {str(k): str(v) for k, v in raw.items()}
 
 
 def timestamp(time: datetime) -> str:
