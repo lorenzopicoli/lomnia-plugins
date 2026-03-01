@@ -33,6 +33,9 @@ class ActivityRecord:
     speed: Optional[float]
     step_length: Optional[float]
     stance_time: Optional[float]
+    lat: Optional[float]
+    lng: Optional[float]
+    altitude: Optional[float]
     vertical_oscillation: Optional[float]
 
 

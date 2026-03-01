@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import fitdecode
@@ -12,7 +12,6 @@ from garmin.transform.models.activity import (
     ActivityTrainingSettings,
     ActivityUserMetrics,
 )
-from garmin.transform.schemas import Schemas
 
 
 @dataclass
@@ -25,7 +24,7 @@ class FITResult:
     records: list[ActivityRecord]
 
 
-def process_activity_file(activity_file: Path, metadata: TransformRunMetadata, schemas: Schemas):
+def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
     filename = activity_file.stem
     parts = filename.split("_")
     fit = fitdecode.FitReader(str(activity_file), processor=fitdecode.StandardUnitsDataProcessor())
@@ -41,7 +40,6 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata, s
     sessions: list[ActivitySession] = []
     records: list[ActivityRecord] = []
 
-    print(f"Processing {activity_name}")
     for frame in fit:
         # Only care about data messages (not definitions or headers)
         if isinstance(frame, fitdecode.records.FitDataMessage):
@@ -86,12 +84,12 @@ def extract_user_metrics(
     if frame.name != "unknown_79":
         return None
 
-    timestamp = frame.get_field("timestamp")
+    timestamp = frame.get_field(253)
     vo2_max = frame.get_field(0)
     max_hr = frame.get_field(6)
     lthr = frame.get_field(11)
     return ActivityUserMetrics(
-        timestamp=timestamp.value,
+        timestamp=datetime.fromtimestamp(timestamp.value, tz=timezone.utc),
         vo2_max=vo2_max.value if vo2_max else None,
         max_hr=max_hr.value if max_hr else None,
         lthr=lthr.value if lthr else None,
@@ -104,12 +102,12 @@ def extract_device_status(
     if frame.name != "unknown_104":
         return None
 
-    timestamp = frame.get_field("timestamp")
+    timestamp = frame.get_field(253)
     battery = frame.get_field(2)
     temperature = frame.get_field(3)
 
     return ActivityDeviceStatus(
-        timestamp=timestamp.value,
+        timestamp=datetime.fromtimestamp(timestamp.value, tz=timezone.utc),
         battery_level=battery.value if battery else None,
         temperature=temperature.value if temperature else None,
     )
@@ -132,6 +130,9 @@ def extract_record(frame: fitdecode.records.FitDataMessage) -> ActivityRecord | 
 
     timestamp = frame.get_field("timestamp")
     heart_rate = frame.get_field("heart_rate")
+    lat = frame.get_field("position_lat") if frame.has_field("position_lat") else None
+    lng = frame.get_field("position_lng") if frame.has_field("position_lng") else None
+    altitude = frame.get_field("enhanced_altitude") if frame.has_field("enhanced_altitude") else None
     distance = frame.get_field("distance") if frame.has_field("distance") else None
     cadence = frame.get_field("cadence") if frame.has_field("cadence") else None
     vertical_oscillation = frame.get_field("vertical_oscillation") if frame.has_field("vertical_oscillation") else None
@@ -150,6 +151,9 @@ def extract_record(frame: fitdecode.records.FitDataMessage) -> ActivityRecord | 
         step_length=step_length.value if step_length else None,
         stance_time=stance_time.value if stance_time else None,
         vertical_oscillation=vertical_oscillation.value if vertical_oscillation else None,
+        lat=lat.value if lat else None,
+        lng=lng.value if lng else None,
+        altitude=altitude.value if altitude else None,
     )
 
 
@@ -162,7 +166,7 @@ def extract_activity_session(frame: fitdecode.records.FitDataMessage) -> Activit
     sport = frame.get_field("sport")
     start_time = frame.get_field("start_time")
     total_time_elapsed = frame.get_field(7)
-    end_date = timestamp + timedelta(seconds=total_time_elapsed)
+    end_date = timestamp + timedelta(seconds=total_time_elapsed.value)
     total_distance = frame.get_field("total_distance")
     return ActivitySession(
         timestamp=timestamp,

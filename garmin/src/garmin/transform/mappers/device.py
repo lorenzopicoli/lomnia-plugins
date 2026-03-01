@@ -5,6 +5,7 @@ import jsonschema
 from garmin.config import PLUGIN_NAME
 from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.models.device import Device
+from garmin.transform.parsers.activity import FITResult
 from garmin.transform.schemas import Schemas
 
 
@@ -34,3 +35,27 @@ def transform_device(
         metadata.record("device", [])
         entries.append(transformed)
     return entries
+
+
+def transform_device_from_fit(
+    *,
+    fit: FITResult,
+    metadata: TransformRunMetadata,
+    schemas: Schemas,
+) -> dict[str, Any]:
+    transformed: dict[str, Any] = {
+        "id": str(fit.device_id),
+        "entityType": "device",
+        "source": PLUGIN_NAME,
+        "version": "1",
+    }
+
+    if schemas.device is not None:
+        try:
+            jsonschema.validate(instance=transformed, schema=schemas.device)
+        except jsonschema.ValidationError as e:
+            print(f"Valid data validation error: {e.message}")
+            raise
+
+    metadata.record("device", [])
+    return transformed
