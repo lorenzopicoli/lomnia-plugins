@@ -13,7 +13,9 @@ from dotenv import load_dotenv
 from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
 from garmin.transform.mappers.device import transform_device, transform_device_from_fit
 from garmin.transform.mappers.device_status import transform_device_status
+from garmin.transform.mappers.exercise import transform_exercise
 from garmin.transform.mappers.hr import transform_hr, transform_hr_from_fit
+from garmin.transform.mappers.location import transform_location
 from garmin.transform.mappers.sleep import transform_sleep
 from garmin.transform.mappers.sleep_stage import transform_sleep_stage
 from garmin.transform.meta import TransformRunMetadata
@@ -46,6 +48,9 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
             metadata.activity_mapping = read_activity_mapping(tmp_path)
+            transformed = process_activity_files(tmp_path, metadata, schemas)
+            for line in transformed:
+                writer.write(line)
             transformed = process_device_files(tmp_path, metadata, schemas)
             for line in transformed:
                 writer.write(line)
@@ -59,9 +64,6 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 writer.write(line)
             # transformed =process_weight_files(tmp_path)
             # writer.write(transformed)
-            transformed = process_activity_files(tmp_path, metadata, schemas)
-            for line in transformed:
-                writer.write(line)
     with Path(metadata_file).open("w", encoding="utf-8") as f:
         json.dump(metadata.to_dict(), f, indent=2)
 
@@ -101,9 +103,11 @@ def process_activity_files(tmp_path: Path, metadata: TransformRunMetadata, schem
     for activity_file in activity_dir.glob("*.fit"):
         print("Found activity file:", activity_file)
         fit = process_activity_file(activity_file, metadata)
+        result.extend(transform_exercise(fit=fit, metadata=metadata, schemas=schemas))
+        result.extend(transform_location(fit=fit, metadata=metadata, schemas=schemas))
+        result.extend(transform_device_status(fit=fit, metadata=metadata, schemas=schemas))
         result.append(transform_device_from_fit(fit=fit, metadata=metadata, schemas=schemas))
         result.extend(transform_hr_from_fit(fit=fit, metadata=metadata, schemas=schemas))
-        result.extend(transform_device_status(fit=fit, metadata=metadata, schemas=schemas))
     return result
 
 

@@ -16,6 +16,7 @@ from garmin.transform.models.activity import (
 
 @dataclass
 class FITResult:
+    activity_name: str
     device_id: str
     device_statuses: list[ActivityDeviceStatus]
     metrics: list[ActivityUserMetrics]
@@ -32,6 +33,10 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
     activity_id = parts[2]
     activity_name = metadata.activity_mapping.get(activity_id)
     print("Activity Name:", activity_name)
+
+    if activity_name is None:
+        print("Skipping activity for not having a name")
+        raise
 
     device_id: str
     device_statuses: list[ActivityDeviceStatus] = []
@@ -62,6 +67,7 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
                 records.append(record)
 
     return FITResult(
+        activity_name=activity_name,
         device_id=device_id,
         device_statuses=device_statuses,
         metrics=metrics,

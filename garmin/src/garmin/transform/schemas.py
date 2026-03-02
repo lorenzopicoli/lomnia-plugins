@@ -91,7 +91,9 @@ def get_schemas():
         load_schema(local=env.local_loc_schema, default_url=LOCATION_SCHEMA_URL) if not env.skip_schema_check else None
     )
     exercise_schema = (
-        load_schema(local=env.local_loc_schema, default_url=EXERCISE_SCHEMA_URL) if not env.skip_schema_check else None
+        load_schema(local=env.local_exercise_schema, default_url=EXERCISE_SCHEMA_URL)
+        if not env.skip_schema_check
+        else None
     )
 
     return Schemas(
