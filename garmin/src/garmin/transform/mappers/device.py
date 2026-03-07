@@ -17,8 +17,11 @@ def transform_device(
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for registered_device in device.RegisteredDevices:
+        did = str(registered_device.deviceId)
+        if did in metadata.device_ids_seen:
+            continue
         transformed: dict[str, Any] = {
-            "id": str(registered_device.deviceId),
+            "id": did,
             "name": registered_device.deviceTypeSimpleName,
             "entityType": "device",
             "source": PLUGIN_NAME,
@@ -34,6 +37,7 @@ def transform_device(
 
         metadata.record("device", [])
         entries.append(transformed)
+        metadata.device_ids_seen.add(did)
     return entries
 
 
@@ -42,9 +46,12 @@ def transform_device_from_fit(
     fit: FITResult,
     metadata: TransformRunMetadata,
     schemas: Schemas,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
+    did = str(fit.device_id)
+    if did in metadata.device_ids_seen:
+        return None
     transformed: dict[str, Any] = {
-        "id": str(fit.device_id),
+        "id": did,
         "entityType": "device",
         "source": PLUGIN_NAME,
         "version": "1",
@@ -58,4 +65,5 @@ def transform_device_from_fit(
             raise
 
     metadata.record("device", [])
+    metadata.device_ids_seen.add(did)
     return transformed

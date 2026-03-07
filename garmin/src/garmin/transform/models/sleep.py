@@ -241,22 +241,22 @@ class HrvDatum(BaseModel):
 
 class Sleep(BaseModel):
     dailySleepDTO: DailySleepDTO
-    sleepMovement: list[SleepMovementItem]
+    sleepMovement: list[SleepMovementItem] | None = None
     remSleepData: bool
-    sleepLevels: list[SleepLevel]
-    sleepRestlessMoments: list[SleepRestlessMoment]
-    restlessMomentsCount: int
+    sleepLevels: list[SleepLevel] | None = None
+    sleepRestlessMoments: list[SleepRestlessMoment] | None = None
+    restlessMomentsCount: int | None = None
     wellnessSpO2SleepSummaryDTO: WellnessSpO2SleepSummaryDTO
-    wellnessEpochSPO2DataDTOList: list[WellnessEpochSPO2DataDTOListItem]
-    wellnessEpochRespirationDataDTOList: list[WellnessEpochRespirationDataDTOListItem]
-    wellnessEpochRespirationAveragesList: list[WellnessEpochRespirationAveragesListItem]
-    respirationVersion: int
-    sleepHeartRate: list[SleepHeartRateItem]
-    sleepStress: list[SleepStres]
-    sleepBodyBattery: list[SleepBodyBatteryItem]
+    wellnessEpochSPO2DataDTOList: list[WellnessEpochSPO2DataDTOListItem] | None = None
+    wellnessEpochRespirationDataDTOList: list[WellnessEpochRespirationDataDTOListItem] | None = None
+    wellnessEpochRespirationAveragesList: list[WellnessEpochRespirationAveragesListItem] | None = None
+    respirationVersion: int | None = None
+    sleepHeartRate: list[SleepHeartRateItem] | None = None
+    sleepStress: list[SleepStres] | None = None
+    sleepBodyBattery: list[SleepBodyBatteryItem] | None = None
     skinTempDataExists: bool
-    hrvData: list[HrvDatum]
-    avgOvernightHrv: float
-    hrvStatus: str
+    hrvData: list[HrvDatum] | None = None
+    avgOvernightHrv: float | None = None
+    hrvStatus: str | None = None
     bodyBatteryChange: int
     restingHeartRate: int

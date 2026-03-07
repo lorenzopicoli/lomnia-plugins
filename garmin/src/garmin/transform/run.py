@@ -48,9 +48,6 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
                 # Unsafe, but I trust the tar :)
                 tar.extractall(path=tmp_path)  # noqa: S202
             metadata.activity_mapping = read_activity_mapping(tmp_path)
-            transformed = process_activity_files(tmp_path, metadata, schemas)
-            for line in transformed:
-                writer.write(line)
             transformed = process_device_files(tmp_path, metadata, schemas)
             for line in transformed:
                 writer.write(line)
@@ -62,6 +59,9 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
             transformed = process_hr_files(tmp_path, deviceId, metadata, schemas)
             for line in transformed:
                 writer.write(line)
+            transformed = process_activity_files(tmp_path, metadata, schemas)
+            for line in transformed:
+                writer.write(line)
             # transformed =process_weight_files(tmp_path)
             # writer.write(transformed)
     with Path(metadata_file).open("w", encoding="utf-8") as f:
@@ -71,7 +71,11 @@ def run_transform(out_dir: str, in_dir: str, schemas: Schemas):
 def process_sleep_files(tmp_path: Path, deviceId: str, metadata: TransformRunMetadata, schemas: Schemas):
     result = []
     for sleep_file in (Path(tmp_path) / SLEEP_FOLDER).glob("*.json"):
+        print("Found sleep file:", sleep_file)
         raw = json.loads(Path(sleep_file).read_text())
+        if raw.get("dailySleepDTO") is None or raw.get("dailySleepDTO").get("id") is None:
+            print("Skipping sleep ingest. No sleep data found", sleep_file)
+            continue
         sleep = Sleep(**raw)
         result.append(transform_sleep(sleep=sleep, deviceId=deviceId, metadata=metadata, schemas=schemas))
         result.extend(transform_sleep_stage(sleep=sleep, deviceId=deviceId, metadata=metadata, schemas=schemas))
@@ -81,6 +85,7 @@ def process_sleep_files(tmp_path: Path, deviceId: str, metadata: TransformRunMet
 def process_hr_files(tmp_path: Path, deviceId: str, metadata: TransformRunMetadata, schemas: Schemas):
     result = []
     for hr in (Path(tmp_path) / HR_FOLDER).glob("*.json"):
+        print("Found hr file:", hr)
         raw = json.loads(Path(hr).read_text())
         hr = HeartRate(**raw)
         result.extend(transform_hr(hr=hr, deviceId=deviceId, metadata=metadata, schemas=schemas))
@@ -90,6 +95,7 @@ def process_hr_files(tmp_path: Path, deviceId: str, metadata: TransformRunMetada
 def process_device_files(tmp_path: Path, metadata: TransformRunMetadata, schemas: Schemas):
     result = []
     for device in (Path(tmp_path) / DEVICE_FOLDER).glob("*.json"):
+        print("Found device file:", device)
         raw = json.loads(Path(device).read_text())
         device = Device(**raw)
         result.extend(transform_device(device=device, metadata=metadata, schemas=schemas))
@@ -106,7 +112,9 @@ def process_activity_files(tmp_path: Path, metadata: TransformRunMetadata, schem
         result.extend(transform_exercise(fit=fit, metadata=metadata, schemas=schemas))
         result.extend(transform_location(fit=fit, metadata=metadata, schemas=schemas))
         result.extend(transform_device_status(fit=fit, metadata=metadata, schemas=schemas))
-        result.append(transform_device_from_fit(fit=fit, metadata=metadata, schemas=schemas))
+        device = transform_device_from_fit(fit=fit, metadata=metadata, schemas=schemas)
+        if device:
+            result.append(device)
         result.extend(transform_hr_from_fit(fit=fit, metadata=metadata, schemas=schemas))
     return result
 

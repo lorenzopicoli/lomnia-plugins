@@ -20,6 +20,9 @@ def transform_hr(
     schemas: Schemas,
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
+    if hr.heartRateValues is None:
+        print("Skipping heart rate data, missing data", hr.calendarDate)
+        return []
 
     for _i, row in enumerate(hr.heartRateValues):
         if not row or len(row) < 2:

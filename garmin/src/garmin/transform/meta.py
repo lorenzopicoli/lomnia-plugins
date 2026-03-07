@@ -11,7 +11,6 @@ from garmin.version import get_version
 class TransformRunMetadata:
     transformer: str = PACKAGE_NAME
     transformer_version: str = get_version()
-
     files_processed: list[str] = field(default_factory=list)
 
     min_date: Optional[datetime] = None
@@ -21,6 +20,7 @@ class TransformRunMetadata:
     activity_mapping: dict[str, str] = field(default_factory=lambda: {})
 
     counts: dict[str, int] = field(default_factory=lambda: {})
+    device_ids_seen: set[str] = field(default_factory=lambda: set())
 
     def add_files_processed(self, path: Path) -> None:
         self.files_processed.append(path.name)

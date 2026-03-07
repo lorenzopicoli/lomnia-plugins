@@ -26,6 +26,9 @@ def transform_sleep_stage(
 ) -> list[dict[str, Any]]:
     levels = sleep.sleepLevels
     result = []
+    if levels is None:
+        print("No sleep stages data for day", sleep.dailySleepDTO.calendarDate)
+        return []
     for level in levels:
         start = level.startGMT
         end = level.endGMT

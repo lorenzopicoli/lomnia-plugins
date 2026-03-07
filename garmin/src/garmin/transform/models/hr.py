@@ -19,9 +19,9 @@ class HeartRate(BaseModel):
     endTimestampGMT: str
     startTimestampLocal: str
     endTimestampLocal: str
-    maxHeartRate: int
-    minHeartRate: int
-    restingHeartRate: int
-    lastSevenDaysAvgRestingHeartRate: int
-    heartRateValueDescriptors: list[HeartRateValueDescriptor]
-    heartRateValues: list[list[int | None]]
+    maxHeartRate: int | None = None
+    minHeartRate: int | None = None
+    restingHeartRate: int | None = None
+    lastSevenDaysAvgRestingHeartRate: int | None = None
+    heartRateValueDescriptors: list[HeartRateValueDescriptor] | None = None
+    heartRateValues: list[list[int | None]] | None = None
