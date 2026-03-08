@@ -5,9 +5,14 @@ import jsonschema
 
 from garmin.config import PLUGIN_NAME
 from garmin.transform.mappers.utils.iso_utc import iso_utc
+from garmin.transform.mappers.utils.remove_none_values import remove_none_values
 from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.parsers.activity import FITResult
 from garmin.transform.schemas import Schemas
+
+
+def kmh_to_min_per_km(speed_kmh: float) -> float:
+    return 60 / speed_kmh
 
 
 def transform_exercise(
@@ -27,7 +32,7 @@ def transform_exercise(
         exercise_type = (
             session.sub_sport if session.sport == "training" or session.sport == "generic" else session.sport
         )
-        transformed: dict[str, Any] = {
+        transformed: dict[str, Any] = remove_none_values({
             "entityType": "exercise",
             "version": "1",
             "id": f"{PLUGIN_NAME}_{timestamp.timestamp()}",
@@ -37,7 +42,13 @@ def transform_exercise(
             "startedAt": iso_utc(session.start_time),
             "endedAt": iso_utc(session.end_time),
             "exerciseType": exercise_type,
-        }
+            "distance": session.total_distance,
+            "avgPace": kmh_to_min_per_km(session.avg_speed) if session.avg_speed else None,
+            "avgHeartRate": session.avg_heart_rate,
+            # Average cadence from Garmin is in cycles (?) per minute. We want steps per minute
+            "avgCadence": session.avg_cadence * 2 if session.avg_cadence else None,
+            "selfEvaluation": fit.training_settings.pop().self_evaluation,
+        })
 
         if schemas.exercise is not None:
             try:

@@ -174,6 +174,10 @@ def extract_activity_session(frame: fitdecode.records.FitDataMessage) -> Activit
     total_time_elapsed = frame.get_field(7)
     end_date = timestamp + timedelta(seconds=total_time_elapsed.value)
     total_distance = frame.get_field("total_distance")
+    avg_speed = frame.get_field("enhanced_avg_speed")
+    avg_hr = frame.get_field("avg_heart_rate")
+    avg_cadence = frame.get_field("avg_cadence")
+
     return ActivitySession(
         timestamp=timestamp,
         sport=sport.value if sport else None,
@@ -181,4 +185,7 @@ def extract_activity_session(frame: fitdecode.records.FitDataMessage) -> Activit
         start_time=start_time.value if start_time else None,
         end_time=end_date,
         total_distance=total_distance.value if total_distance else None,
+        avg_cadence=avg_cadence.value if avg_cadence else None,
+        avg_heart_rate=avg_hr.value if avg_hr else None,
+        avg_speed=avg_speed.value if avg_speed else None,
     )

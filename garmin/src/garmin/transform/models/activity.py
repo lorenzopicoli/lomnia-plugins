@@ -47,3 +47,6 @@ class ActivitySession:
     start_time: Optional[datetime]
     end_time: Optional[datetime]
     total_distance: Optional[float]
+    avg_heart_rate: Optional[float]
+    avg_cadence: Optional[float]
+    avg_speed: Optional[float]
