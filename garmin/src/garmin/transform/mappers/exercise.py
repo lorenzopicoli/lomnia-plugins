@@ -42,7 +42,7 @@ def transform_exercise(
             "startedAt": iso_utc(session.start_time),
             "endedAt": iso_utc(session.end_time),
             "exerciseType": exercise_type,
-            "distance": session.total_distance,
+            "distance": session.total_distance * 1000 if session.total_distance else None,
             "avgPace": kmh_to_min_per_km(session.avg_speed) if session.avg_speed else None,
             "avgHeartRate": session.avg_heart_rate,
             # Average cadence from Garmin is in cycles (?) per minute. We want steps per minute
