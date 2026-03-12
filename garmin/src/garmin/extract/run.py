@@ -77,7 +77,7 @@ def fetch_activity_data(params: ExtractionParams, file_id: str):
     activity_mapping = {}
     client = garth.Client()
 
-    limit = 10
+    limit = 30
     offset = 0
     should_continue = True
 
@@ -120,6 +120,7 @@ def fetch_activity_data(params: ExtractionParams, file_id: str):
             os.remove(activity_zip)
 
         offset += limit
+        sleep(1)
     activity_mapping_file.write_text(
         json.dumps(activity_mapping, ensure_ascii=False),
         encoding="utf-8",

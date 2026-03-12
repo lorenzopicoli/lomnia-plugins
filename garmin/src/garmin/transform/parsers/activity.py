@@ -7,6 +7,7 @@ from attr import dataclass
 from garmin.transform.meta import TransformRunMetadata
 from garmin.transform.models.activity import (
     ActivityDeviceStatus,
+    ActivityLap,
     ActivityRecord,
     ActivitySession,
     ActivityTrainingSettings,
@@ -23,6 +24,7 @@ class FITResult:
     training_settings: list[ActivityTrainingSettings]
     sessions: list[ActivitySession]
     records: list[ActivityRecord]
+    laps: list[ActivityLap]
 
 
 def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
@@ -44,6 +46,7 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
     training_settings: list[ActivityTrainingSettings] = []
     sessions: list[ActivitySession] = []
     records: list[ActivityRecord] = []
+    laps: list[ActivityLap] = []
 
     for frame in fit:
         # Only care about data messages (not definitions or headers)
@@ -66,6 +69,13 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
             if record := extract_record(frame):
                 records.append(record)
 
+            if lap := extract_lap(frame):
+                laps.append(lap)
+
+            # if frame.name == "lap":
+            #     for field in frame.fields:
+            #         print(f"  {field.name}: {field.value}")
+
     return FITResult(
         activity_name=activity_name,
         device_id=device_id,
@@ -74,14 +84,22 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
         training_settings=training_settings,
         sessions=sessions,
         records=records,
+        laps=laps,
     )
 
 
-def extract_device_id(frame: fitdecode.records.FitDataMessage) -> str | None:
-    if frame.name == "file_id":
-        return frame.get_field("serial_number").value
+def field_value(frame, name):
+    if not frame.has_field(name):
+        return None
+    field = frame.get_field(name)
+    return field.value if field else None
 
-    return None
+
+def extract_device_id(frame: fitdecode.records.FitDataMessage) -> str | None:
+    if frame.name != "file_id":
+        return None
+
+    return field_value(frame, "serial_number")
 
 
 def extract_user_metrics(
@@ -90,15 +108,15 @@ def extract_user_metrics(
     if frame.name != "unknown_79":
         return None
 
-    timestamp = frame.get_field(253)
-    vo2_max = frame.get_field(0)
-    max_hr = frame.get_field(6)
-    lthr = frame.get_field(11)
+    timestamp = field_value(frame, 253)
+    if timestamp is None:
+        return None
+
     return ActivityUserMetrics(
-        timestamp=datetime.fromtimestamp(timestamp.value, tz=timezone.utc),
-        vo2_max=vo2_max.value if vo2_max else None,
-        max_hr=max_hr.value if max_hr else None,
-        lthr=lthr.value if lthr else None,
+        timestamp=datetime.fromtimestamp(timestamp, tz=timezone.utc),
+        vo2_max=field_value(frame, 0),
+        max_hr=field_value(frame, 6),
+        lthr=field_value(frame, 11),
     )
 
 
@@ -108,14 +126,14 @@ def extract_device_status(
     if frame.name != "unknown_104":
         return None
 
-    timestamp = frame.get_field(253)
-    battery = frame.get_field(2)
-    temperature = frame.get_field(3)
+    timestamp = field_value(frame, 253)
+    if timestamp is None:
+        return None
 
     return ActivityDeviceStatus(
-        timestamp=datetime.fromtimestamp(timestamp.value, tz=timezone.utc),
-        battery_level=battery.value if battery else None,
-        temperature=temperature.value if temperature else None,
+        timestamp=datetime.fromtimestamp(timestamp, tz=timezone.utc),
+        battery_level=field_value(frame, 2),
+        temperature=field_value(frame, 3),
     )
 
 
@@ -125,41 +143,28 @@ def extract_training_settings(
     if frame.name != "training_settings":
         return None
 
-    self_evaluation = frame.get_field(93)
-
-    return ActivityTrainingSettings(self_evaluation=self_evaluation.value if self_evaluation else None)
+    return ActivityTrainingSettings(
+        self_evaluation=field_value(frame, 93),
+    )
 
 
 def extract_record(frame: fitdecode.records.FitDataMessage) -> ActivityRecord | None:
     if frame.name != "record":
         return None
 
-    timestamp = frame.get_field("timestamp")
-    heart_rate = frame.get_field("heart_rate")
-    lat = frame.get_field("position_lat") if frame.has_field("position_lat") else None
-    lng = frame.get_field("position_lng") if frame.has_field("position_lng") else None
-    altitude = frame.get_field("enhanced_altitude") if frame.has_field("enhanced_altitude") else None
-    distance = frame.get_field("distance") if frame.has_field("distance") else None
-    cadence = frame.get_field("cadence") if frame.has_field("cadence") else None
-    vertical_oscillation = frame.get_field("vertical_oscillation") if frame.has_field("vertical_oscillation") else None
-    speed = frame.get_field("enhanced_speed") if frame.has_field("enhanced_speed") else None
-    step_length = frame.get_field("step_length") if frame.has_field("step_length") else None
-    stance_time = frame.get_field("stance_time") if frame.has_field("stance_time") else None
-    body_battery = frame.get_field(143)  # unknown_143
-
     return ActivityRecord(
-        timestamp=timestamp.value if timestamp else None,
-        heart_rate=heart_rate.value if heart_rate else None,
-        distance=distance.value if distance else None,
-        body_battery=body_battery.value if body_battery else None,
-        cadence=cadence.value if cadence else None,
-        speed=speed.value if speed else None,
-        step_length=step_length.value if step_length else None,
-        stance_time=stance_time.value if stance_time else None,
-        vertical_oscillation=vertical_oscillation.value if vertical_oscillation else None,
-        lat=lat.value if lat else None,
-        lng=lng.value if lng else None,
-        altitude=altitude.value if altitude else None,
+        timestamp=field_value(frame, "timestamp"),
+        heart_rate=field_value(frame, "heart_rate"),
+        distance=field_value(frame, "distance"),
+        body_battery=field_value(frame, 143),  # unknown_143
+        cadence=field_value(frame, "cadence"),
+        speed=field_value(frame, "enhanced_speed"),
+        step_length=field_value(frame, "step_length"),
+        stance_time=field_value(frame, "stance_time"),
+        vertical_oscillation=field_value(frame, "vertical_oscillation"),
+        lat=field_value(frame, "position_lat"),
+        lng=field_value(frame, "position_lng"),
+        altitude=field_value(frame, "enhanced_altitude"),
     )
 
 
@@ -167,25 +172,64 @@ def extract_activity_session(frame: fitdecode.records.FitDataMessage) -> Activit
     if frame.name != "session":
         return None
 
-    timestamp: datetime = frame.get_field("timestamp").value
-    sub_sport = frame.get_field("sub_sport")
-    sport = frame.get_field("sport")
-    start_time = frame.get_field("start_time")
-    total_time_elapsed = frame.get_field(7)
-    end_date = timestamp + timedelta(seconds=total_time_elapsed.value)
-    total_distance = frame.get_field("total_distance")
-    avg_speed = frame.get_field("enhanced_avg_speed")
-    avg_hr = frame.get_field("avg_heart_rate")
-    avg_cadence = frame.get_field("avg_cadence")
+    timestamp = field_value(frame, "timestamp")
+    total_time_elapsed = field_value(frame, 7)
+
+    if timestamp is None:
+        return None
+
+    end_time = timestamp + timedelta(seconds=total_time_elapsed) if total_time_elapsed is not None else None
 
     return ActivitySession(
         timestamp=timestamp,
-        sport=sport.value if sport else None,
-        sub_sport=sub_sport.value if sub_sport else None,
-        start_time=start_time.value if start_time else None,
-        end_time=end_date,
-        total_distance=total_distance.value if total_distance else None,
-        avg_cadence=avg_cadence.value if avg_cadence else None,
-        avg_heart_rate=avg_hr.value if avg_hr else None,
-        avg_speed=avg_speed.value if avg_speed else None,
+        sport=field_value(frame, "sport"),
+        sub_sport=field_value(frame, "sub_sport"),
+        start_time=field_value(frame, "start_time"),
+        end_time=end_time,
+        total_distance=field_value(frame, "total_distance"),
+        avg_cadence=field_value(frame, "avg_cadence"),
+        avg_heart_rate=field_value(frame, "avg_heart_rate"),
+        avg_speed=field_value(frame, "enhanced_avg_speed"),
+    )
+
+
+def extract_lap(frame: fitdecode.records.FitDataMessage) -> ActivityLap | None:
+    if frame.name != "lap":
+        return None
+    start_time = field_value(frame, "start_time")
+    total_time_elapsed = field_value(frame, "total_timer_time")
+    end_time = None
+    if start_time and total_time_elapsed:
+        end_time = start_time + timedelta(seconds=total_time_elapsed)
+    total_distance = field_value(frame, "total_distance")
+    total_strides = field_value(frame, "total_strides")
+
+    avg_speed = field_value(frame, "enhanced_avg_speed")
+    max_speed = field_value(frame, "enhanced_max_speed")
+
+    avg_vertical_oscillation = field_value(frame, "avg_vertical_oscillation")
+    avg_stance_time = field_value(frame, "avg_stance_time")
+    avg_step_length = field_value(frame, "avg_step_length")
+
+    avg_heart_rate = field_value(frame, "avg_heart_rate")
+    max_heart_rate = field_value(frame, "max_heart_rate")
+
+    avg_running_cadence = field_value(frame, "avg_running_cadence")
+    max_running_cadence = field_value(frame, "max_running_cadence")
+
+    return ActivityLap(
+        start_time=start_time,
+        end_time=end_time,
+        total_distance=total_distance,
+        total_strides=total_strides,
+        avg_speed=avg_speed,
+        max_speed=max_speed,
+        avg_vertical_oscillation=avg_vertical_oscillation,
+        avg_stance_time=avg_stance_time,
+        avg_step_length=avg_step_length,
+        avg_heart_rate=avg_heart_rate,
+        max_heart_rate=max_heart_rate,
+        avg_cadence=avg_running_cadence,
+        max_cadence=max_running_cadence,
+        duration=total_time_elapsed,
     )

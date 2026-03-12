@@ -32,7 +32,7 @@ def transform_exercise(
         exercise_type = (
             session.sub_sport if session.sport == "training" or session.sport == "generic" else session.sport
         )
-        transformed: dict[str, Any] = remove_none_values({
+        exercise: dict[str, Any] = remove_none_values({
             "entityType": "exercise",
             "version": "1",
             "id": f"{PLUGIN_NAME}_{timestamp.timestamp()}",
@@ -48,19 +48,73 @@ def transform_exercise(
             # Average cadence from Garmin is in cycles (?) per minute. We want steps per minute
             "avgCadence": session.avg_cadence * 2 if session.avg_cadence else None,
             "selfEvaluation": fit.training_settings.pop().self_evaluation,
+            "laps": transform_exercise_laps(fit),
+            "metrics": transform_exercise_metrics(fit),
         })
 
         if schemas.exercise is not None:
             try:
-                jsonschema.validate(instance=transformed, schema=schemas.exercise)
+                jsonschema.validate(instance=exercise, schema=schemas.exercise)
             except jsonschema.ValidationError as e:
                 print(f"Valid data validation error: {e.message}")
                 raise
 
         metadata.record(
             "exercise",
-            [datetime.fromisoformat(transformed["startedAt"]), datetime.fromisoformat(transformed["endedAt"])],
+            [datetime.fromisoformat(exercise["startedAt"]), datetime.fromisoformat(exercise["endedAt"])],
         )
-        entries.append(transformed)
+        entries.append(exercise)
 
+    return entries
+
+
+def transform_exercise_laps(fit: FITResult) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for lap in fit.laps:
+        if lap.start_time is None or lap.end_time is None:
+            print("Skipping lap for lack of start/end time")
+            continue
+        entry: dict[str, Any] = remove_none_values({
+            "startedAt": iso_utc(lap.start_time),
+            "endedAt": iso_utc(lap.start_time),
+            "distance": lap.total_distance * 1000 if lap.total_distance else None,
+            "duration": lap.duration,
+            "avgPace": kmh_to_min_per_km(lap.avg_speed) if lap.avg_speed else None,
+            "maxPace": kmh_to_min_per_km(lap.max_speed) if lap.max_speed else None,
+            "avgHeartRate": lap.avg_heart_rate,
+            "maxHeartRate": lap.max_heart_rate,
+            # Average cadence from Garmin is in cycles (?) per minute. We want steps per minute
+            "avgCadence": lap.avg_cadence * 2 if lap.avg_cadence else None,
+            "maxCadence": lap.max_cadence * 2 if lap.max_cadence else None,
+            "avgStepLength": lap.avg_step_length,
+            "avgVerticalOscillation": lap.avg_vertical_oscillation,
+            "avgStanceTime": lap.avg_stance_time,
+        })
+        entries.append(entry)
+    return entries
+
+
+def transform_exercise_metrics(fit: FITResult) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for record in fit.records:
+        if record.timestamp is None:
+            print("Skipping record for lack of timestamp")
+            continue
+        metrics = {
+            "distance": record.distance * 1000 if record.distance else None,
+            "cadence": record.cadence * 2 if record.cadence else None,
+            "pace": kmh_to_min_per_km(record.speed) if record.speed else None,
+            "stepLength": record.step_length,
+            "verticalOscillation": record.vertical_oscillation,
+            "stanceTime": record.stance_time,
+        }
+
+        if not any(v is not None for v in metrics.values()):
+            continue
+
+        entry = remove_none_values({
+            "recordedAt": iso_utc(record.timestamp),
+            **metrics,
+        })
+        entries.append(entry)
     return entries

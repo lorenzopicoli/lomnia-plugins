@@ -50,3 +50,26 @@ class ActivitySession:
     avg_heart_rate: Optional[float]
     avg_cadence: Optional[float]
     avg_speed: Optional[float]
+
+
+@dataclass
+class ActivityLap:
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+
+    total_distance: Optional[float]
+    duration: Optional[float]
+    total_strides: Optional[int]
+
+    avg_speed: Optional[float]
+    max_speed: Optional[float]
+
+    avg_heart_rate: Optional[int]
+    max_heart_rate: Optional[int]
+
+    avg_cadence: Optional[int]
+    max_cadence: Optional[int]
+
+    avg_step_length: Optional[float]
+    avg_vertical_oscillation: Optional[float]
+    avg_stance_time: Optional[float]
