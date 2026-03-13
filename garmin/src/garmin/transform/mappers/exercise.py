@@ -15,6 +15,10 @@ def kmh_to_min_per_km(speed_kmh: float) -> float:
     return 60 / speed_kmh
 
 
+def kmh_to_ms(speed_kmh: float) -> float:
+    return speed_kmh / 3.6
+
+
 def transform_exercise(
     *,
     fit: FITResult,
@@ -75,6 +79,7 @@ def transform_exercise_laps(fit: FITResult) -> list[dict[str, Any]]:
             print("Skipping lap for lack of start/end time")
             continue
         entry: dict[str, Any] = remove_none_values({
+            "id": f"{PLUGIN_NAME}_{lap.start_time.timestamp()}_{lap.end_time.timestamp()}",
             "startedAt": iso_utc(lap.start_time),
             "endedAt": iso_utc(lap.start_time),
             "distance": lap.total_distance * 1000 if lap.total_distance else None,
@@ -101,6 +106,9 @@ def transform_exercise_metrics(fit: FITResult) -> list[dict[str, Any]]:
             print("Skipping record for lack of timestamp")
             continue
         metrics = {
+            "id": f"{PLUGIN_NAME}_{record.timestamp}",
+            "recordedAt": iso_utc(record.timestamp),
+            "speed": kmh_to_ms(record.speed) if record.speed else None,
             "distance": record.distance * 1000 if record.distance else None,
             "cadence": record.cadence * 2 if record.cadence else None,
             "pace": kmh_to_min_per_km(record.speed) if record.speed else None,
