@@ -27,7 +27,7 @@ class FITResult:
     laps: list[ActivityLap]
 
 
-def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
+def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):  # noqa: C901
     filename = activity_file.stem
     parts = filename.split("_")
     fit = fitdecode.FitReader(str(activity_file), processor=fitdecode.StandardUnitsDataProcessor())
