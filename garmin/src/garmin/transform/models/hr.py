@@ -15,10 +15,10 @@ class HeartRateValueDescriptor(BaseModel):
 class HeartRate(BaseModel):
     userProfilePK: int
     calendarDate: str
-    startTimestampGMT: str
-    endTimestampGMT: str
-    startTimestampLocal: str
-    endTimestampLocal: str
+    startTimestampGMT: str | None = None
+    endTimestampGMT: str | None = None
+    startTimestampLocal: str | None = None
+    endTimestampLocal: str | None = None
     maxHeartRate: int | None = None
     minHeartRate: int | None = None
     restingHeartRate: int | None = None
