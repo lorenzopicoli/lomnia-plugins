@@ -143,7 +143,7 @@ class DailySleepDTO(BaseModel):
     awakeCount: int
     avgSleepStress: float
     ageGroup: str
-    avgHeartRate: float
+    avgHeartRate: float | None = None
     sleepScoreFeedback: str
     sleepScoreInsight: str
     sleepScorePersonalizedInsight: str

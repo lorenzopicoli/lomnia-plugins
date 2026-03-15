@@ -12,7 +12,7 @@ from time import sleep
 
 import garth
 
-from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER, WEIGHT_FOLDER
+from garmin.config import ACTIVITY_FOLDER, DEVICE_FOLDER, HR_FOLDER, PLUGIN_NAME, SLEEP_FOLDER
 from garmin.extract.meta import write_meta_file
 
 
@@ -136,11 +136,11 @@ def fetch_data_for_day(params: ExtractionParams, current_day: datetime, file_id:
 
     sleep_data_file = params.out_dir / SLEEP_FOLDER / f"{prefix}_daily_sleep_data.json"
     hr_file = params.out_dir / HR_FOLDER / f"{prefix}_daily_hr.json"
-    weight_file = params.out_dir / WEIGHT_FOLDER / f"{prefix}_weight_date_range.json"
+    # weight_file = params.out_dir / WEIGHT_FOLDER / f"{prefix}_weight_date_range.json"
 
     sleep_data_file.parent.mkdir(parents=True, exist_ok=True)
     hr_file.parent.mkdir(parents=True, exist_ok=True)
-    weight_file.parent.mkdir(parents=True, exist_ok=True)
+    # weight_file.parent.mkdir(parents=True, exist_ok=True)
 
     query_params = {"date": day, "nonSleepBufferMinutes": 60}
     sleep_data = garth.connectapi(
@@ -157,11 +157,11 @@ def fetch_data_for_day(params: ExtractionParams, current_day: datetime, file_id:
     hr_file.write_text(json.dumps(hr_data))
 
     query_params = {"startDate": day, "endDate": day}
-    weight_data = garth.connectapi(
-        garmin_connect_weight_url,
-        params=query_params,
-    )
-    weight_file.write_text(json.dumps(weight_data))
+    # weight_data = garth.connectapi(
+    #     garmin_connect_weight_url,
+    #     params=query_params,
+    # )
+    # weight_file.write_text(json.dumps(weight_data))
 
 
 def archive_in_place(source_dir: str, file_name: str):

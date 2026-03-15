@@ -163,7 +163,7 @@ def extract_record(frame: fitdecode.records.FitDataMessage) -> ActivityRecord | 
         stance_time=field_value(frame, "stance_time"),
         vertical_oscillation=field_value(frame, "vertical_oscillation"),
         lat=field_value(frame, "position_lat"),
-        lng=field_value(frame, "position_lng"),
+        lng=field_value(frame, "position_long"),
         altitude=field_value(frame, "enhanced_altitude"),
     )
 
