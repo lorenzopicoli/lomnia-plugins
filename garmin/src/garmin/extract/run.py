@@ -33,14 +33,15 @@ garmin_connect_weight_url = "/weight-service/weight/dateRange"
 garmin_connect_download_service_url = "/download-service/files"
 garmin_connect_device_url = "/web-gateway/device-info/primary-training-device"
 
+day_delay = 2
+
 
 def run_extract(params: ExtractionParams):
     extract_start = datetime.now(timezone.utc)
     garth.login(params.email, params.password)
     file_id = str(uuid.uuid4()).split("-")[0]
-    day_delay = 2
 
-    curr_date = params.start_date
+    curr_date = params.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
     fetch_device_data(params, file_id)
     while curr_date < datetime.now(tz=timezone.utc) - timedelta(days=day_delay):
         fetch_data_for_day(params, curr_date, file_id)
@@ -51,10 +52,15 @@ def run_extract(params: ExtractionParams):
     end_day = curr_date.strftime("%Y-%m-%d")
     final_file_name = f"{PLUGIN_NAME}_{start_day}_{end_day}_{file_id}"
     archive_in_place(str(params.out_dir), final_file_name)
+    data_window_start = params.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    # One day buffer
+    data_window_end = curr_date - timedelta(days=1)
     write_meta_file(
         out_dir=params.out_dir,
         file_name=final_file_name,
         extract_start=extract_start,
+        data_window_start=data_window_start.isoformat(),
+        data_window_end=data_window_end.isoformat(),
     )
 
 
@@ -90,6 +96,10 @@ def fetch_activity_data(params: ExtractionParams, file_id: str):
         for activity in activities:
             activity_start = activity.start_time_gmt
             if activity_start is None:
+                continue
+
+            # Ignore activities that happened in the last 2 days to give time for them to be updated and changed
+            if activity_start.astimezone(timezone.utc) > datetime.now(timezone.utc) - timedelta(days=day_delay):
                 continue
 
             if activity_start.astimezone(timezone.utc) < params.start_date.astimezone(timezone.utc):
