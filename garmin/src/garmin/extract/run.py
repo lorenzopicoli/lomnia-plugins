@@ -20,7 +20,6 @@ from garmin.extract.meta import write_meta_file
 class ExtractionParams:
     start_date: datetime
     out_dir: Path
-    in_dir: Path
 
     username: str
     email: str

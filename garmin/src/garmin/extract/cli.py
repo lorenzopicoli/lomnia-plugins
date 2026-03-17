@@ -22,7 +22,6 @@ class EnvVars:
 class ExtractorArgs(NamedTuple):
     start_date: datetime
     out_dir: Path
-    in_dir: Path
 
 
 def parse_extract_args() -> ExtractorArgs:
@@ -42,16 +41,9 @@ def parse_extract_args() -> ExtractorArgs:
         help="Output directory path",
     )
 
-    parser.add_argument(
-        "--in_dir",
-        required=True,
-        type=Path,
-        help="Input directory path",
-    )
-
     args = parser.parse_args()
 
-    return ExtractorArgs(start_date=args.start_date, out_dir=args.out_dir, in_dir=args.in_dir)
+    return ExtractorArgs(start_date=args.start_date, out_dir=args.out_dir)
 
 
 def extract():
@@ -59,13 +51,11 @@ def extract():
     env = EnvVars()
 
     print("Start date:", args.start_date)
-    print("Input dir:", args.in_dir)
     print("Output dir:", args.out_dir)
 
     params = ExtractionParams(
         start_date=args.start_date,
         out_dir=args.out_dir,
-        in_dir=args.in_dir,
         username=env.username,
         email=env.email,
         password=env.password,
