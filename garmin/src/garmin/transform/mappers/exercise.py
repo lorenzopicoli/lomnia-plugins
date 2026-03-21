@@ -101,10 +101,12 @@ def transform_exercise_laps(fit: FITResult) -> list[dict[str, Any]]:
 
 def transform_exercise_metrics(fit: FITResult) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
+
     for record in fit.records:
         if record.timestamp is None:
             print("Skipping record for lack of timestamp")
             continue
+
         metrics = {
             "id": f"{PLUGIN_NAME}_{record.timestamp}",
             "recordedAt": iso_utc(record.timestamp),
@@ -117,12 +119,23 @@ def transform_exercise_metrics(fit: FITResult) -> list[dict[str, Any]]:
             "stanceTime": record.stance_time,
         }
 
-        if not any(v is not None for v in metrics.values()):
+        has_real_data = any(
+            metrics[key] is not None
+            for key in [
+                "speed",
+                "distance",
+                "cadence",
+                "pace",
+                "stepLength",
+                "verticalOscillation",
+                "stanceTime",
+            ]
+        )
+
+        if not has_real_data:
             continue
 
-        entry = remove_none_values({
-            "recordedAt": iso_utc(record.timestamp),
-            **metrics,
-        })
+        entry = remove_none_values(metrics)
         entries.append(entry)
+
     return entries
