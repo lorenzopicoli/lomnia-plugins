@@ -51,7 +51,8 @@ def transform_exercise(
             "avgHeartRate": session.avg_heart_rate,
             # Average cadence from Garmin is in cycles (?) per minute. We want steps per minute
             "avgCadence": session.avg_cadence * 2 if session.avg_cadence else None,
-            "selfEvaluation": fit.training_settings.pop().self_evaluation,
+            "feelScore": session.workout_feel,
+            "perceivedEffort": session.workout_rpe,
             "laps": transform_exercise_laps(fit),
             "metrics": transform_exercise_metrics(fit),
         })

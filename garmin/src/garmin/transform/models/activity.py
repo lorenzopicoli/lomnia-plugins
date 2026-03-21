@@ -20,7 +20,8 @@ class ActivityUserMetrics:
 
 @dataclass
 class ActivityTrainingSettings:
-    self_evaluation: Optional[int]
+    # IGNORE
+    self_evaluation: Optional[str]
 
 
 @dataclass
@@ -50,6 +51,8 @@ class ActivitySession:
     avg_heart_rate: Optional[float]
     avg_cadence: Optional[float]
     avg_speed: Optional[float]
+    workout_rpe: Optional[int]
+    workout_feel: Optional[int]
 
 
 @dataclass

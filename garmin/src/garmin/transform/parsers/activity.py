@@ -21,13 +21,12 @@ class FITResult:
     device_id: str
     device_statuses: list[ActivityDeviceStatus]
     metrics: list[ActivityUserMetrics]
-    training_settings: list[ActivityTrainingSettings]
     sessions: list[ActivitySession]
     records: list[ActivityRecord]
     laps: list[ActivityLap]
 
 
-def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):  # noqa: C901
+def process_activity_file(activity_file: Path, metadata: TransformRunMetadata):
     filename = activity_file.stem
     parts = filename.split("_")
     fit = fitdecode.FitReader(str(activity_file), processor=fitdecode.StandardUnitsDataProcessor())
@@ -43,7 +42,6 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata): 
     device_id: str
     device_statuses: list[ActivityDeviceStatus] = []
     metrics: list[ActivityUserMetrics] = []
-    training_settings: list[ActivityTrainingSettings] = []
     sessions: list[ActivitySession] = []
     records: list[ActivityRecord] = []
     laps: list[ActivityLap] = []
@@ -63,9 +61,6 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata): 
             if session := extract_activity_session(frame):
                 sessions.append(session)
 
-            if settings_info := extract_training_settings(frame):
-                training_settings.append(settings_info)
-
             if record := extract_record(frame):
                 records.append(record)
 
@@ -81,7 +76,6 @@ def process_activity_file(activity_file: Path, metadata: TransformRunMetadata): 
         device_id=device_id,
         device_statuses=device_statuses,
         metrics=metrics,
-        training_settings=training_settings,
         sessions=sessions,
         records=records,
         laps=laps,
@@ -190,6 +184,8 @@ def extract_activity_session(frame: fitdecode.records.FitDataMessage) -> Activit
         avg_cadence=field_value(frame, "avg_cadence"),
         avg_heart_rate=field_value(frame, "avg_heart_rate"),
         avg_speed=field_value(frame, "enhanced_avg_speed"),
+        workout_feel=field_value(frame, "workout_feel"),
+        workout_rpe=field_value(frame, "workout_rpe"),
     )
 
 
